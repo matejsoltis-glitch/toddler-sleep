@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
@@ -23,20 +23,19 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Nastavenie Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Inštalácia závislostí a zostavenie webu
         run: |
           npm install
           npm run build || true
-          npx cap init "Toddler Sleep Assistant" "com.toddler.sleep.assistant" --web-dir dist || npx cap init "Toddler Sleep Assistant" "com.toddler.sleep.assistant" --web-dir .
+          npx cap init "Toddler Sleep" "com.matej.toddlersleep" --web-dir dist || npx cap init "Toddler Sleep" "com.matej.toddlersleep" --web-dir .
           npm install @capacitor/android @capacitor/assets
           npx cap add android
-          npx @capacitor/assets generate --android
+          npx @capacitor/assets generate --android || true
           npx cap sync android
 
       - name: Zostavenie APK (Debug)
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
         run: |
           cd android
           chmod +x gradlew
@@ -45,5 +44,5 @@ jobs:
       - name: Uloženie APK ako artefakt
         uses: actions/upload-artifact@v4
         with:
-          name: moja-aplikacia-debug-apk
+          name: toddler-sleep-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
