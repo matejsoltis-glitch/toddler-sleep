@@ -297,71 +297,82 @@ class SoundEngine {
   }
 
   private setupRainAmbience(ctx: AudioContext, destination: GainNode): void {
-    // Continuous steady rain bed: Pink noise with soft upper filter
-    const rainBuf = this.createPinkNoiseBuffer(ctx, 6);
+    // 1. Warm soothing rain body: Brown + Pink noise bed filtered smoothly with gentle lowpass
+    const pinkBuf = this.createPinkNoiseBuffer(ctx, 8);
     const rainSource = ctx.createBufferSource();
-    rainSource.buffer = rainBuf;
+    rainSource.buffer = pinkBuf;
     rainSource.loop = true;
 
-    const rainFilter = ctx.createBiquadFilter();
-    rainFilter.type = 'lowpass';
-    rainFilter.frequency.setValueAtTime(2800, ctx.currentTime);
-    rainFilter.Q.setValueAtTime(0.8, ctx.currentTime);
+    // Dual-stage soft lowpass eliminates any harsh static sizzle or sharp highs
+    const rainFilter1 = ctx.createBiquadFilter();
+    rainFilter1.type = 'lowpass';
+    rainFilter1.frequency.setValueAtTime(1350, ctx.currentTime);
+    rainFilter1.Q.setValueAtTime(0.5, ctx.currentTime);
+
+    const rainFilter2 = ctx.createBiquadFilter();
+    rainFilter2.type = 'lowpass';
+    rainFilter2.frequency.setValueAtTime(1800, ctx.currentTime);
+    rainFilter2.Q.setValueAtTime(0.5, ctx.currentTime);
 
     const rainGain = ctx.createGain();
-    rainGain.gain.setValueAtTime(0.65, ctx.currentTime);
+    rainGain.gain.setValueAtTime(0.48, ctx.currentTime);
 
-    rainSource.connect(rainFilter);
-    rainFilter.connect(rainGain);
+    rainSource.connect(rainFilter1);
+    rainFilter1.connect(rainFilter2);
+    rainFilter2.connect(rainGain);
     rainGain.connect(destination);
     rainSource.start();
 
-    // Secondary subtle rooftop/foliage patter
-    const patterBuf = this.createWhiteNoiseBuffer(ctx, 5);
-    const patterSource = ctx.createBufferSource();
-    patterSource.buffer = patterBuf;
-    patterSource.loop = true;
+    // 2. Soft, natural foliage and window pane diffuse shower spray (wide non-resonant band)
+    const sprayBuf = this.createPinkNoiseBuffer(ctx, 6);
+    const spraySource = ctx.createBufferSource();
+    spraySource.buffer = sprayBuf;
+    spraySource.loop = true;
 
-    const patterFilter = ctx.createBiquadFilter();
-    patterFilter.type = 'bandpass';
-    patterFilter.frequency.setValueAtTime(3200, ctx.currentTime);
-    patterFilter.Q.setValueAtTime(2.2, ctx.currentTime);
+    const sprayFilter = ctx.createBiquadFilter();
+    sprayFilter.type = 'bandpass';
+    sprayFilter.frequency.setValueAtTime(1650, ctx.currentTime);
+    sprayFilter.Q.setValueAtTime(0.85, ctx.currentTime); // Low Q avoids any whistling resonance
 
-    const patterGain = ctx.createGain();
-    patterGain.gain.setValueAtTime(0.18, ctx.currentTime);
+    // Gentle slow wave mimicking subtle natural breeze shifting the rain intensity
+    const sprayLfo = ctx.createOscillator();
+    sprayLfo.frequency.setValueAtTime(0.06, ctx.currentTime); // ~16s wave
+    const sprayLfoGain = ctx.createGain();
+    sprayLfoGain.gain.setValueAtTime(0.06, ctx.currentTime);
+    sprayLfo.connect(sprayLfoGain);
 
-    patterSource.connect(patterFilter);
-    patterFilter.connect(patterGain);
-    patterGain.connect(destination);
-    patterSource.start();
+    const sprayGain = ctx.createGain();
+    sprayGain.gain.setValueAtTime(0.18, ctx.currentTime);
+    sprayLfoGain.connect(sprayGain.gain);
+    sprayLfo.start();
 
-    // Occasional gentle raindrop drops
-    const dropInterval = window.setInterval(() => {
-      if (!this.ctx || this.currentMode !== 'nature') return;
-      try {
-        const dropOsc = this.ctx.createOscillator();
-        const dropGain = this.ctx.createGain();
-        const startFreq = 1600 + Math.random() * 800;
-        dropOsc.type = 'sine';
-        dropOsc.frequency.setValueAtTime(startFreq, this.ctx.currentTime);
-        dropOsc.frequency.exponentialRampToValueAtTime(startFreq * 0.45, this.ctx.currentTime + 0.08);
+    spraySource.connect(sprayFilter);
+    sprayFilter.connect(sprayGain);
+    sprayGain.connect(destination);
+    spraySource.start();
 
-        dropGain.gain.setValueAtTime(0.04 * (Math.random() * 0.5 + 0.5), this.ctx.currentTime);
-        dropGain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);
+    // 3. Ultra-soft deep ground droplet bed (Brown noise through lowpass)
+    const brownBuf = this.createBrownNoiseBuffer(ctx, 8);
+    const groundSource = ctx.createBufferSource();
+    groundSource.buffer = brownBuf;
+    groundSource.loop = true;
 
-        dropOsc.connect(dropGain);
-        dropGain.connect(destination);
-        dropOsc.start();
-        dropOsc.stop(this.ctx.currentTime + 0.09);
-      } catch {
-        // ignore
-      }
-    }, 450);
+    const groundFilter = ctx.createBiquadFilter();
+    groundFilter.type = 'lowpass';
+    groundFilter.frequency.setValueAtTime(420, ctx.currentTime);
 
-    this.natureNodes.sources.push(rainSource, patterSource);
-    this.natureNodes.filters.push(rainFilter, patterFilter);
-    this.natureNodes.gains.push(rainGain, patterGain);
-    this.natureNodes.intervals.push(dropInterval);
+    const groundGain = ctx.createGain();
+    groundGain.gain.setValueAtTime(0.28, ctx.currentTime);
+
+    groundSource.connect(groundFilter);
+    groundFilter.connect(groundGain);
+    groundGain.connect(destination);
+    groundSource.start();
+
+    this.natureNodes.sources.push(rainSource, spraySource, groundSource);
+    this.natureNodes.filters.push(rainFilter1, rainFilter2, sprayFilter, groundFilter);
+    this.natureNodes.gains.push(rainGain, sprayGain, sprayLfoGain, groundGain);
+    this.natureNodes.lfos.push(sprayLfo);
   }
 
   private setupOceanAmbience(ctx: AudioContext, destination: GainNode): void {
@@ -444,7 +455,7 @@ class SoundEngine {
     nightGain.connect(destination);
     nightSource.start();
 
-    // 2. Very quiet, distant night crickets texture
+    // 2. Very quiet, distant night crickets texture (attenuated by 50% for maximum comfort)
     const cricketBuf = this.createPinkNoiseBuffer(ctx, 5);
     const cricketSource = ctx.createBufferSource();
     cricketSource.buffer = cricketBuf;
@@ -452,17 +463,17 @@ class SoundEngine {
 
     const cricketFilter = ctx.createBiquadFilter();
     cricketFilter.type = 'bandpass';
-    cricketFilter.frequency.setValueAtTime(4500, ctx.currentTime);
-    cricketFilter.Q.setValueAtTime(4.0, ctx.currentTime);
+    cricketFilter.frequency.setValueAtTime(4200, ctx.currentTime);
+    cricketFilter.Q.setValueAtTime(2.4, ctx.currentTime); // Soft Q prevents piercing peaks
 
     const cricketLfo = ctx.createOscillator();
-    cricketLfo.frequency.setValueAtTime(6.0, ctx.currentTime); // ~6Hz cricket pulse
+    cricketLfo.frequency.setValueAtTime(5.8, ctx.currentTime); // Gentle natural cricket pulse
     const cricketLfoGain = ctx.createGain();
-    cricketLfoGain.gain.setValueAtTime(0.04, ctx.currentTime);
+    cricketLfoGain.gain.setValueAtTime(0.02, ctx.currentTime); // Reduced by 50% (was 0.04)
     cricketLfo.connect(cricketLfoGain);
 
     const cricketGain = ctx.createGain();
-    cricketGain.gain.setValueAtTime(0.04, ctx.currentTime);
+    cricketGain.gain.setValueAtTime(0.02, ctx.currentTime); // Reduced by 50% (was 0.04)
     cricketLfoGain.connect(cricketGain.gain);
     cricketLfo.start();
 

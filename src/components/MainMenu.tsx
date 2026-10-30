@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Radio, Trees, ChevronRight, Square, Play, Volume2, SunMedium } from 'lucide-react';
+import { Sparkles, Radio, Trees, Calendar, ChevronRight, Square, Play, Volume2, SunMedium } from 'lucide-react';
 import { AppMode, Language } from '../types';
 import { translations } from '../i18n/translations';
 import { triggerHaptic } from '../utils/haptics';
@@ -87,6 +87,16 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       iconBg: 'bg-emerald-400 text-slate-950 shadow-emerald-400/30',
       isActive: isNatureActive,
       activeBadge: t.modes.nature.activeBadge,
+    },
+    {
+      id: 'schedule' as AppMode,
+      title: t.modes.schedule?.tabTitle || (language === 'sk' ? 'Asistent spánkového režimu' : 'Schedule Assistant'),
+      subtitle: t.modes.schedule?.tabSubtitle || (language === 'sk' ? 'Sledovanie bdelosti, spánku a história' : 'Track naps, wake windows & export'),
+      icon: Calendar,
+      gradient: 'from-violet-500/20 via-purple-500/15 to-indigo-500/10 border-violet-500/30 text-violet-300',
+      iconBg: 'bg-violet-400 text-slate-950 shadow-violet-400/30',
+      isActive: false,
+      activeBadge: t.modes.schedule?.activeBadge || 'Aktívny',
     },
   ];
 

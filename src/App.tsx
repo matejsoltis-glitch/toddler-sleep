@@ -4,6 +4,7 @@ import { MainMenu } from './components/MainMenu';
 import { CalmLightMode } from './components/CalmLightMode';
 import { WhiteNoiseMode } from './components/WhiteNoiseMode';
 import { NatureSoundsMode } from './components/NatureSoundsMode';
+import { ScheduleAssistantMode } from './components/ScheduleAssistantMode';
 import { SleepTimerControls } from './components/SleepTimerControls';
 import { FullScreenLamp } from './components/FullScreenLamp';
 import { SettingsModal } from './components/SettingsModal';
@@ -178,41 +179,9 @@ export default function App() {
     soundEngine.setVolume(clamped);
   };
 
-  // Navigating to a mode from Main Menu activates that mode
+  // Navigating to a mode from Main Menu activates that view (does not auto-start playback until user presses start)
   const handleSelectModeFromMenu = (mode: AppMode) => {
     setActiveMode(mode);
-
-    if (mode === 'light') {
-      setIsLightOn(true);
-      setLastActiveConfig((prev) => ({ ...prev, light: true }));
-      if (durationMinutes > 0 && !isTimerRunning) {
-        setIsTimerRunning(true);
-      }
-    } else if (mode === 'white-noise') {
-      setIsNaturePlaying(false);
-      soundEngine.playWhiteNoise(whiteNoiseLevel);
-      setIsWhiteNoisePlaying(true);
-      setLastActiveConfig((prev) => ({
-        ...prev,
-        soundType: 'white-noise',
-        whiteNoiseLevel,
-      }));
-      if (durationMinutes > 0 && !isTimerRunning) {
-        setIsTimerRunning(true);
-      }
-    } else if (mode === 'nature') {
-      setIsWhiteNoisePlaying(false);
-      soundEngine.playNatureSound(activeNatureSound);
-      setIsNaturePlaying(true);
-      setLastActiveConfig((prev) => ({
-        ...prev,
-        soundType: 'nature',
-        natureSound: activeNatureSound,
-      }));
-      if (durationMinutes > 0 && !isTimerRunning) {
-        setIsTimerRunning(true);
-      }
-    }
   };
 
   // Sound Playback Handlers
@@ -663,6 +632,11 @@ export default function App() {
               fadeMultiplier={fadeMultiplier}
             />
           )}
+
+          {/* VIEW 4: Mode 4 - Schedule Assistant */}
+          {activeMode === 'schedule' && (
+            <ScheduleAssistantMode language={language} />
+          )}
         </div>
 
         {/* Universal Sleep Timer & Gradual Fade-out */}
@@ -684,13 +658,16 @@ export default function App() {
         </div>
       </main>
 
-      {/* Subtle Mobile Bottom Status with Author */}
+      {/* Subtle Mobile Bottom Status with Version & Author */}
       <footer
         className={`w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between text-[11px] text-white/40 border-t border-white/5 select-none ${
           isFullScreenLamp ? 'invisible pointer-events-none' : ''
         }`}
       >
-        <span className="font-medium text-white/60">Toddler sleep assistant</span>
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-white/60">Toddler sleep assistant</span>
+          <span className="text-[11px] font-bold italic text-white/50">v0.87</span>
+        </div>
         <span>Autor: Matej Šoltis</span>
       </footer>
     </div>

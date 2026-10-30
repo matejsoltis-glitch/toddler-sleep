@@ -139,6 +139,11 @@ export interface Translations {
         };
       };
     };
+    schedule?: {
+      tabTitle: string;
+      tabSubtitle: string;
+      activeBadge: string;
+    };
   };
   timer: {
     title: string;
@@ -260,7 +265,7 @@ export const translations: Record<Language, Translations> = {
         tabTitle: '2. White Noise',
         tabSubtitle: '3 intensity levels in seamless loop',
         activeBadge: 'Playing noise',
-        play: 'Play Loop White Noise',
+        play: 'Play White Noise',
         stop: 'Stop White Noise',
         volume: 'White Noise Volume',
         volumeTip: 'Tip: Recommended volume for infant sleep is around 50–60 dB (gentle background wash).',
@@ -340,6 +345,11 @@ export const translations: Record<Language, Translations> = {
             rhythm: 'Gentle womb tempo ~68 BPM',
           },
         },
+      },
+      schedule: {
+        tabTitle: '4. Schedule Assistant',
+        tabSubtitle: 'Track naps, sleep sessions & export',
+        activeBadge: 'Tracking',
       },
     },
     timer: {
@@ -484,7 +494,7 @@ export const translations: Record<Language, Translations> = {
         tabTitle: '2. Biely šum',
         tabSubtitle: '3 úrovne intenzity v slučke',
         activeBadge: 'Hrá šum',
-        play: 'Spustiť biely šum v loope',
+        play: 'Spustiť biely šum',
         stop: 'Zastaviť biely šum',
         volume: 'Hlasitosť bieleho šumu',
         volumeTip: 'Tip: Odporúčaná hlasitosť pre spánok novorodencov je okolo 50–60 dB (jemné šumenie v pozadí).',
@@ -564,6 +574,11 @@ export const translations: Record<Language, Translations> = {
             rhythm: 'Tlmený rytmus ~68 BPM',
           },
         },
+      },
+      schedule: {
+        tabTitle: '4. Asistent spánkového režimu',
+        tabSubtitle: 'Sledovanie bdelosti, spánku a história',
+        activeBadge: 'Sleduje sa',
       },
     },
     timer: {

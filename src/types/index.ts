@@ -1,6 +1,19 @@
 export type Language = 'sk' | 'cs' | 'en' | 'pl' | 'hu' | 'uk' | 'it';
 
-export type AppMode = 'menu' | 'light' | 'white-noise' | 'nature';
+export type AppMode = 'menu' | 'light' | 'white-noise' | 'nature' | 'schedule';
+
+export type SleepQuality = 'peaceful' | 'normal' | 'restless';
+export type SleepType = 'day-nap' | 'night-sleep';
+
+export interface SleepSession {
+  id: string;
+  startTime: string; // ISO string
+  endTime: string; // ISO string
+  durationMinutes: number;
+  type: SleepType;
+  quality: SleepQuality;
+  notes?: string;
+}
 
 export type WhiteNoiseLevel = 'gentle' | 'balanced' | 'deep';
 

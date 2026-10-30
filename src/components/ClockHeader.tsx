@@ -41,21 +41,21 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
   return (
     <header className="w-full border-b border-white/10 select-none bg-slate-950/70 backdrop-blur-md sticky top-0 z-30">
       {/* Main Top Header without any distracting clock, day or date */}
-      <div className="w-full max-w-md mx-auto px-4 py-2.5 flex items-center justify-between gap-2">
-        {/* Left side: Back to menu button or peaceful indicator */}
-        <div className="flex items-center gap-2">
+      <div className="w-full max-w-md mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
+        {/* Left side: Day/Night status or Back button, with remaining timer positioned cleanly underneath */}
+        <div className="flex flex-col items-start justify-center min-w-0">
           {activeMode !== 'menu' ? (
             <button
               onClick={onBackToMenu}
-              className="h-10 px-3 -ml-1 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/95 flex items-center gap-1.5 text-xs font-semibold transition-all touch-manipulation border border-white/15 shadow-sm"
+              className="h-8 px-2.5 -ml-1 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/95 flex items-center gap-1.5 text-xs font-semibold transition-all touch-manipulation border border-white/15 shadow-sm"
               title="Späť do hlavného menu"
               aria-label="Späť do menu"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-3.5 h-3.5" />
               <span>{language === 'sk' ? 'Hlavné menu' : language === 'cs' ? 'Hlavní menu' : 'Main Menu'}</span>
             </button>
           ) : (
-            <div className="flex items-center gap-2 text-xs text-white/60">
+            <div className="flex items-center gap-1.5 text-xs text-white/70">
               {nightMode.isAfterSunset ? (
                 <span className="flex items-center gap-1.5 text-amber-300/90 font-medium">
                   <Moon className="w-3.5 h-3.5 text-amber-300" />
@@ -69,19 +69,22 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
               )}
             </div>
           )}
-        </div>
 
-        {/* Right side: Active Timer badge, Battery indicator, Child lock button, Settings Gear icon ("koliesko") */}
-        <div className="flex items-center gap-1.5">
-          {/* Active timer badge if running */}
+          {/* Active timer placed elegantly underneath left label, away from camera cutouts */}
           {isPlaying && timerRemaining !== null && timerRemaining > 0 && (
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-mono">
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-mono leading-none mt-1 shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{formatTimer(timerRemaining)}</span>
+              <span className="font-semibold">{formatTimer(timerRemaining)}</span>
+              <span className="text-[10px] text-emerald-300/60 font-sans tracking-wide">
+                {t.timer.remaining}
+              </span>
             </div>
           )}
+        </div>
 
-          {/* Gentle Battery Indicator - situated directly to the left of Child Lock button with no background box */}
+        {/* Right side: Gentle Battery indicator, Child lock button, Settings Gear */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Gentle Battery Indicator */}
           <div className="flex items-center px-1">
             <BatteryIndicator className="text-white/45" />
           </div>
