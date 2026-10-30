@@ -41,6 +41,19 @@ jobs:
           npx @capacitor/assets generate --android || true
           npx cap sync android
 
+      - name: Oprava duplicitných Kotlin závislostí
+        run: |
+          cat << 'EOF' >> android/app/build.gradle
+
+          configurations.all {
+              resolutionStrategy {
+                  force("org.jetbrains.kotlin:kotlin-stdlib:1.8.22")
+                  force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22")
+                  force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22")
+              }
+          }
+          EOF
+
       - name: Zostavenie APK (Debug)
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
