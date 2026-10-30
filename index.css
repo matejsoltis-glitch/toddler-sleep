@@ -1,0 +1,213 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #030712;
+    color: #f8fafc;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 24s linear infinite;
+}
+
+/* Standalone floating greeting animation (fly-in zoom + fade, then reverse zoom out) */
+@keyframes greeting-fly-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+    filter: blur(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0px);
+  }
+}
+
+@keyframes greeting-fly-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.82);
+    filter: blur(8px);
+  }
+}
+
+.animate-greeting-fly-in {
+  animation: greeting-fly-in 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-greeting-fly-out {
+  animation: greeting-fly-out 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes soft-halo-pulse {
+  0%, 100% {
+    opacity: 0.25;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.1);
+  }
+}
+
+.animate-soft-halo {
+  animation: soft-halo-pulse 5.5s ease-in-out infinite;
+}
+
+/* Rhythmic Breathing Animation for Calm Light Fullscreen Mode */
+@keyframes rhythmic-breathing {
+  0%, 100% {
+    transform: scale(0.96);
+    opacity: 0.65;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 0.98;
+  }
+}
+
+.animate-rhythmic-breathing {
+  animation: rhythmic-breathing 6s ease-in-out infinite;
+}
+
+/* Smooth GPU-accelerated Mode Transitions - Modernized & silky (slowed down by 20% from 260ms to 315ms) */
+@keyframes mode-enter {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 7px, 0) scale(0.982);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+.animate-mode-enter {
+  animation: mode-enter 315ms cubic-bezier(0.2, 1, 0.32, 1) both;
+  will-change: transform, opacity, filter;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Liquid Water Wave Animation for Sliders */
+@keyframes liquid-wave-fast {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes liquid-wave-slow {
+  0% {
+    transform: translate3d(-50%, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-liquid-fast {
+  animation: liquid-wave-fast 2.6s linear infinite;
+  will-change: transform;
+}
+
+.animate-liquid-active {
+  animation: liquid-wave-fast 1.1s linear infinite;
+  will-change: transform;
+}
+
+.animate-liquid-slow {
+  animation: liquid-wave-slow 4.2s linear infinite;
+  will-change: transform;
+}
+
+.animate-liquid-slow-active {
+  animation: liquid-wave-slow 1.7s linear infinite;
+  will-change: transform;
+}
+
+/* Smooth Accordion Expansion for Sleep Timer */
+.timer-drawer-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 520ms cubic-bezier(0.2, 1, 0.32, 1), opacity 460ms ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.timer-drawer-expand {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.timer-drawer-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Custom styling for range inputs on touch devices */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  height: 8px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f8fafc;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  transition: transform 0.1s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(1.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f8fafc;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
