@@ -2,7 +2,8 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches:
+      - '**'
   workflow_dispatch:
 
 jobs:
@@ -32,7 +33,7 @@ jobs:
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "com.matej.toddlersleep",
-            "appName": "Toddler Sleep",
+            "appName": "Toddler sleep assistant",
             "webDir": "dist"
           }
           EOF
@@ -41,10 +42,29 @@ jobs:
           npx @capacitor/assets generate --android || true
           npx cap sync android
 
-      - name: Nastavenie celej obrazovky (Immersive Fullscreen)
+      - name: Nastavenie celej obrazovky (Immersive Fullscreen v Java)
         run: |
-          # Pridanie celoobrazovkoveho rezimu do Android stylu aplikacie
-          sed -i '/<\/style>/i \        <item name="android:windowFullscreen">true</item>\n        <item name="android:windowContentOverlay">@null</item>' android/app/src/main/res/values/styles.xml
+          cat << 'EOF' > android/app/src/main/java/com/matej/toddlersleep/MainActivity.java
+          package com.matej.toddlersleep;
+
+          import android.os.Bundle;
+          import androidx.core.view.WindowCompat;
+          import androidx.core.view.WindowInsetsCompat;
+          import androidx.core.view.WindowInsetsControllerCompat;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+                  WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+                  controller.hide(WindowInsetsCompat.Type.systemBars());
+                  controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+              }
+          }
+          EOF
 
       - name: Oprava duplicitných Kotlin závislostí
         run: |
