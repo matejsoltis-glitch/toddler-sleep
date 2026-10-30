@@ -19,6 +19,9 @@ import {
 import { Language, SleepSession, SleepQuality, SleepType } from '../types';
 import { translations } from '../i18n/translations';
 import { triggerHaptic } from '../utils/haptics';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 interface ScheduleAssistantModeProps {
   language: Language;
@@ -299,10 +302,8 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
   const todayNightMins = todayNightSessions.reduce((acc, curr) => acc + curr.durationMinutes, 0);
   const todayAvgMins = todaySessions.length > 0 ? Math.round(todayTotalMins / todaySessions.length) : 0;
 
-  // 4. Export for Google Drive / Sheets (CSV with UTF-8 BOM)
-  const handleExportCSV = async () => {
-    triggerHaptic('medium');
-
+  // Generate CSV formatted content with UTF-8 BOM
+  const generateCSVContent = () => {
     const headers = [
       'Dátum',
       'Čas začiatku',
@@ -341,13 +342,41 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
       ].join(',');
     });
 
-    // Prepend UTF-8 BOM (\uFEFF) so Google Sheets, Excel & Google Drive handle diacritics natively
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    return '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+  };
+
+  // 4. Export for Android (Capacitor), Google Drive, and Web Browsers
+  const handleExportCSV = async () => {
+    triggerHaptic('medium');
+    const csvContent = generateCSVContent();
     const filename = `detsky-spankovy-rezim-${todayDateStr}.csv`;
 
-    // Try Web Share API (native on phones: directly shows "Google Drive", Gmail, Files, etc.)
-    let shared = false;
+    // 1. Android Capacitor Native Platform Check (installed APK)
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const writtenFile = await Filesystem.writeFile({
+          path: filename,
+          data: csvContent,
+          directory: Directory.Cache,
+          encoding: Encoding.UTF8,
+        });
+
+        await Share.share({
+          title: 'Detský spánkový režim - Export',
+          text: 'Záznamy spánkového režimu (CSV pre Google Drive / Tabuľky)',
+          url: writtenFile.uri,
+          dialogTitle: 'Uložiť do Google Drive / Súbory',
+        });
+
+        showToast(language === 'sk' ? 'Ukladanie CSV spustené' : 'CSV export started');
+        return;
+      } catch (nativeErr) {
+        console.warn('Capacitor native export error, falling back:', nativeErr);
+      }
+    }
+
+    // 2. Web Share API with File (Mobile Chrome / Safari)
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     try {
       if (typeof navigator !== 'undefined' && 'share' in navigator && 'canShare' in navigator) {
         const file = new File([blob], filename, { type: 'text/csv' });
@@ -357,16 +386,30 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
             text: 'Záznamy spánkového režimu pre Google Drive / Tabuľky',
             files: [file],
           });
-          shared = true;
           showToast(language === 'sk' ? 'Zdieľané do Google Drive / aplikácie' : 'Export shared');
+          return;
         }
       }
-    } catch {
-      shared = false;
+    } catch (shareErr) {
+      console.warn('Web Share API file share failed:', shareErr);
     }
 
-    // Direct browser download fallback if share wasn't used or dismissed
-    if (!shared) {
+    // 3. Web Share API with Text content (Android WebView fallback)
+    try {
+      if (typeof navigator !== 'undefined' && 'share' in navigator) {
+        await navigator.share({
+          title: 'Detský spánkový režim (CSV)',
+          text: csvContent,
+        });
+        showToast(language === 'sk' ? 'Zdieľané do aplikácie' : 'Shared');
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
+    // 4. Standard Browser Blob Download
+    try {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -374,13 +417,36 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
       showToast(
         language === 'sk'
           ? 'CSV stiahnuté – pripravené pre Google Drive / Tabuľky'
           : 'CSV downloaded – ready for Google Drive / Sheets'
       );
+      return;
+    } catch {
+      // 5. Data URI fallback
+      const encoded = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
+      const a = document.createElement('a');
+      a.href = encoded;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
+  };
+
+  // Copy raw CSV directly to clipboard for effortless paste into Google Sheets / Excel
+  const handleCopyRawCSV = () => {
+    triggerHaptic('light');
+    const csvContent = generateCSVContent();
+    navigator.clipboard.writeText(csvContent).then(() => {
+      showToast(
+        language === 'sk'
+          ? 'CSV skopírované (môžete vložiť do Tabuliek)'
+          : 'CSV copied to clipboard'
+      );
+    });
   };
 
   // Copy quick summary to clipboard
@@ -749,21 +815,31 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
 
         {isExportExpanded && (
           <div className="px-4 pb-4 pt-1 flex flex-col gap-3 border-t border-white/5 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex flex-wrap items-center gap-2 mt-1">
               <button
                 type="button"
                 onClick={handleExportCSV}
-                className="flex-1 py-2.5 px-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/40 active:scale-95 transition-all"
+                className="flex-1 min-w-[130px] py-2.5 px-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/40 active:scale-95 transition-all"
               >
                 <Share2 className="w-3.5 h-3.5" />
-                <span>{language === 'sk' ? 'Exportovať (CSV)' : 'Export (CSV)'}</span>
+                <span>{language === 'sk' ? 'Uložiť / Zdieľať CSV' : 'Save / Share CSV'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCopyRawCSV}
+                className="py-2.5 px-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-medium text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                title={language === 'sk' ? 'Kopírovať tabuľku CSV' : 'Copy CSV'}
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{language === 'sk' ? 'Kopírovať CSV' : 'Copy CSV'}</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleCopySummary}
                 className="py-2.5 px-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-medium text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                title={language === 'sk' ? 'Kopírovať súhrn' : 'Copy summary'}
+                title={language === 'sk' ? 'Kopírovať textový súhrn' : 'Copy summary'}
               >
                 <Copy className="w-3.5 h-3.5" />
                 <span>{language === 'sk' ? 'Súhrn' : 'Summary'}</span>
