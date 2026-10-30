@@ -17,11 +17,11 @@ jobs:
         with:
           node-version: 20
 
-      - name: Nastavenie Java (JDK 17)
+      - name: Nastavenie Java (JDK 21)
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
 
       - name: Inštalácia závislostí a zostavenie webu
         run: |
@@ -29,7 +29,6 @@ jobs:
           npm run build
           npm install --save-dev @capacitor/cli @capacitor/core @capacitor/android @capacitor/assets --legacy-peer-deps
           
-          # Vytvorenie jednoduchej a spolahlivej JSON konfiguracie namiesto problematickeho .ts
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "com.matej.toddlersleep",
