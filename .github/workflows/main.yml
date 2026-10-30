@@ -26,9 +26,9 @@ jobs:
       - name: Inštalácia závislostí a zostavenie webu
         run: |
           npm install --legacy-peer-deps
-          npm run build || true
-          npx cap init "Toddler Sleep" "com.matej.toddlersleep" --web-dir dist || npx cap init "Toddler Sleep" "com.matej.toddlersleep" --web-dir .
-          npm install @capacitor/android @capacitor/assets --legacy-peer-deps
+          npm run build
+          npm install --save-dev @capacitor/cli @capacitor/core @capacitor/android @capacitor/assets --legacy-peer-deps
+          npx cap init "Toddler Sleep" "com.matej.toddlersleep" --web-dir dist
           npx cap add android
           npx @capacitor/assets generate --android || true
           npx cap sync android
