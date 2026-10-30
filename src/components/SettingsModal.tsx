@@ -208,7 +208,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   : 'bg-white/10 text-white/70'
               }`}
             >
-              {nightMode.redFilter ? 'ZAPNUTÝ' : 'VYPNUTÝ'}
+              {nightMode.redFilter ? hapticText.on : hapticText.off}
             </button>
           </div>
           <p className="text-xs text-white/60">

@@ -144,13 +144,38 @@ export default function App() {
     return hour >= 18 || hour < 7;
   };
 
-  const [nightMode, setNightMode] = useState<NightModeState>({
-    isAutoSunset: true,
-    isAfterSunset: checkAfterSunset(),
-    forceDark: false,
-    redFilter: false,
-    screenDimPercent: 0,
+  const [nightMode, setNightMode] = useState<NightModeState>(() => {
+    try {
+      const saved = localStorage.getItem('toddler_night_mode');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {
+      // ignore
+    }
+    return {
+      isAutoSunset: false, // Default is OFF so eye-saving / night mode NEVER turns on unexpectedly
+      isAfterSunset: false,
+      forceDark: false,
+      redFilter: false,
+      screenDimPercent: 0,
+    };
   });
+
+  const handleUpdateNightMode = (updates: Partial<NightModeState>) => {
+    setNightMode((prev) => {
+      const next = { ...prev, ...updates };
+      if (updates.isAutoSunset) {
+        next.isAfterSunset = checkAfterSunset();
+      }
+      try {
+        localStorage.setItem('toddler_night_mode', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   const [isTouchLocked, setIsTouchLocked] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -161,16 +186,18 @@ export default function App() {
     setHapticsEnabledState(enabled);
   };
 
-  // Check sunset automatically every minute
+  // Check sunset automatically every minute only if user explicitly enabled isAutoSunset
   useEffect(() => {
+    if (!nightMode.isAutoSunset) return;
     const interval = setInterval(() => {
-      setNightMode((prev) => ({
-        ...prev,
-        isAfterSunset: checkAfterSunset(),
-      }));
+      setNightMode((prev) => {
+        if (!prev.isAutoSunset) return prev;
+        const isSunset = checkAfterSunset();
+        return { ...prev, isAfterSunset: isSunset };
+      });
     }, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [nightMode.isAutoSunset]);
 
   // Sync volume with sound engine
   const handleVolumeChange = (vol: number) => {
@@ -519,7 +546,7 @@ export default function App() {
         language={language}
         onSelectLanguage={handleSelectLanguage}
         nightMode={nightMode}
-        onUpdateNightMode={(updates) => setNightMode((prev) => ({ ...prev, ...updates }))}
+        onUpdateNightMode={handleUpdateNightMode}
         hapticsEnabled={hapticsEnabled}
         onToggleHaptics={handleToggleHaptics}
       />
@@ -534,10 +561,10 @@ export default function App() {
         }}
         nightMode={nightMode}
         onToggleNightMode={() =>
-          setNightMode((prev) => ({ ...prev, forceDark: !prev.forceDark }))
+          handleUpdateNightMode({ forceDark: !nightMode.forceDark })
         }
         onToggleRedFilter={() =>
-          setNightMode((prev) => ({ ...prev, redFilter: !prev.redFilter }))
+          handleUpdateNightMode({ redFilter: !nightMode.redFilter })
         }
         isTouchLocked={isTouchLocked}
         onToggleTouchLock={() => {
@@ -666,7 +693,7 @@ export default function App() {
       >
         <div className="flex items-center gap-2">
           <span className="font-medium text-white/60">Toddler sleep assistant</span>
-          <span className="text-[11px] font-bold italic text-white/50">v0.91</span>
+          <span className="text-[11px] font-bold italic text-white/50">v0.92</span>
         </div>
         <span>Autor: Matej Šoltis</span>
       </footer>

@@ -13,11 +13,9 @@ import {
   ChevronDown,
   Sparkles,
   Info,
-  Heart,
   TrendingUp,
 } from 'lucide-react';
 import { Language, SleepSession, SleepQuality, SleepType } from '../types';
-import { translations } from '../i18n/translations';
 import { triggerHaptic } from '../utils/haptics';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
@@ -30,8 +28,583 @@ interface ScheduleAssistantModeProps {
 const STORAGE_KEY_SESSIONS = 'toddler_sleep_sessions';
 const STORAGE_KEY_ACTIVE_SLEEP = 'toddler_active_sleep_start';
 
+interface ScheduleTexts {
+  currentStatus: string;
+  babySleeping: string;
+  babyAwake: string;
+  fellAsleepAt: string;
+  timerBackgroundHint: string;
+  babyWokeUpBtn: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  babyFellAsleepBtn: string;
+  wakeWindow: string;
+  sinceLastSleep: string;
+  todayTotal: string;
+  todayNaps: string;
+  sessionsCount: string;
+  dayNap: string;
+  nightSleep: string;
+  average: string;
+  addManualBtn: string;
+  date: string;
+  from: string;
+  to: string;
+  qualityLabel: string;
+  qualityPeaceful: string;
+  qualityNormal: string;
+  qualityRestless: string;
+  notePlaceholder: string;
+  saveSessionBtn: string;
+  exportCardTitle: string;
+  exportCardSubtitle: string;
+  exportShareBtn: string;
+  copyCSVBtn: string;
+  copySummaryBtn: string;
+  exportInfo: string;
+  historyTitle: string;
+  latestFirst: string;
+  noHistory: string;
+  deleteTitle: string;
+  saveWakeUpModal: string;
+  howWasSleep: string;
+  discard: string;
+  saveToHistory: string;
+  noteModalPlaceholder: string;
+  toastTrackingStarted: string;
+  toastSessionSaved: string;
+  toastSessionAdded: string;
+  toastSessionRemoved: string;
+  toastCsvStarted: string;
+  toastCsvShared: string;
+  toastShared: string;
+  toastCsvDownloaded: string;
+  toastCsvCopied: string;
+  toastSummaryCopied: string;
+  csvHeaders: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    durationMinutes: string;
+    durationFormat: string;
+    sleepType: string;
+    sleepQuality: string;
+    note: string;
+  };
+  csvSummary: {
+    title: string;
+    todayTotal: string;
+    napsCount: string;
+    recentRecords: string;
+  };
+}
+
+const scheduleTexts: Record<Language, ScheduleTexts> = {
+  sk: {
+    currentStatus: 'Aktuálny stav',
+    babySleeping: 'Dieťatko spí',
+    babyAwake: 'Bdie',
+    fellAsleepAt: 'Zaspalo o',
+    timerBackgroundHint: 'Časovač beží na pozadí, pokojne môžete aplikáciu zatvoriť.',
+    babyWokeUpBtn: 'Dieťatko sa zobudilo',
+    heroTitle: 'Zaznamenať spánok jedným ťuknutím',
+    heroSubtitle: 'Hneď ako uložíte dieťatko, spustite stopky spánku.',
+    babyFellAsleepBtn: 'Dieťatko práve zaspalo',
+    wakeWindow: 'Bdelé okno:',
+    sinceLastSleep: 'Od posledného spánku',
+    todayTotal: 'Dnes naspaté',
+    todayNaps: 'Dnešné spánky',
+    sessionsCount: 'záznamy',
+    dayNap: 'Denný spánok',
+    nightSleep: 'Nočný spánok',
+    average: 'Priemer',
+    addManualBtn: 'Pridať spánok ručne',
+    date: 'Dátum',
+    from: 'Od',
+    to: 'Do',
+    qualityLabel: 'Kvalita spánku',
+    qualityPeaceful: '🌿 Kľudný',
+    qualityNormal: '😴 Normálny',
+    qualityRestless: '🌪️ Nepokojný',
+    notePlaceholder: 'Poznámka (voliteľné, napr. zúbky)',
+    saveSessionBtn: 'Uložiť záznam',
+    exportCardTitle: 'Export do Google Drive & Tabuliek',
+    exportCardSubtitle: 'Stiahnite alebo zdieľajte dáta vo formáte CSV',
+    exportShareBtn: 'Uložiť / Zdieľať CSV',
+    copyCSVBtn: 'Kopírovať CSV',
+    copySummaryBtn: 'Súhrn',
+    exportInfo: 'Vygenerovaný súbor CSV obsahuje UTF-8 diakritiku a dá sa priamo nahrať na Google Drive alebo otvoriť v Google Tabuľkách.',
+    historyTitle: 'História spánkov',
+    latestFirst: 'Najnovšie hore',
+    noHistory: 'Zatiaľ nemáte zaznamenaný žiadny spánok. Ťuknite vyššie na "Dieťatko práve zaspalo".',
+    deleteTitle: 'Vymazať',
+    saveWakeUpModal: 'Uložiť prebudenie',
+    howWasSleep: 'Ako dieťatko spalo?',
+    discard: 'Zahodiť',
+    saveToHistory: 'Uložiť do histórie',
+    noteModalPlaceholder: 'Napr. bez nočného budenia',
+    toastTrackingStarted: 'Spánok sa začal zaznamenávať 🌙',
+    toastSessionSaved: 'Spánok bol úspešne uložený! ✨',
+    toastSessionAdded: 'Záznam pridaný do histórie',
+    toastSessionRemoved: 'Záznam vymazaný',
+    toastCsvStarted: 'Ukladanie CSV spustené',
+    toastCsvShared: 'Zdieľané do Google Drive / aplikácie',
+    toastShared: 'Zdieľané do aplikácie',
+    toastCsvDownloaded: 'CSV stiahnuté – pripravené pre Google Drive / Tabuľky',
+    toastCsvCopied: 'CSV skopírované (môžete vložiť do Tabuliek)',
+    toastSummaryCopied: 'Súhrn skopírovaný do schránky',
+    csvHeaders: {
+      date: 'Dátum',
+      startTime: 'Čas začiatku',
+      endTime: 'Čas konca',
+      durationMinutes: 'Trvanie (minúty)',
+      durationFormat: 'Trvanie (formát)',
+      sleepType: 'Typ spánku',
+      sleepQuality: 'Kvalita spánku',
+      note: 'Poznámka',
+    },
+    csvSummary: {
+      title: '📊 Súhrn spánkového režimu',
+      todayTotal: 'Dnes celkovo:',
+      napsCount: 'spánkov',
+      recentRecords: 'Posledné záznamy:',
+    },
+  },
+  cs: {
+    currentStatus: 'Aktuální stav',
+    babySleeping: 'Děťátko spí',
+    babyAwake: 'Bdí',
+    fellAsleepAt: 'Usnulo v',
+    timerBackgroundHint: 'Časovač běží na pozadí, klidně můžete aplikaci zavřít.',
+    babyWokeUpBtn: 'Děťátko se probudilo',
+    heroTitle: 'Zaznamenat spánek jedním klepnutím',
+    heroSubtitle: 'Jakmile uložíte děťátko, spusťte stopky spánku.',
+    babyFellAsleepBtn: 'Děťátko právě usnulo',
+    wakeWindow: 'Bdělý interval:',
+    sinceLastSleep: 'Od posledního spánku',
+    todayTotal: 'Dnes naspáno',
+    todayNaps: 'Dnešní spánky',
+    sessionsCount: 'záznamy',
+    dayNap: 'Denní spánek',
+    nightSleep: 'Noční spánek',
+    average: 'Průměr',
+    addManualBtn: 'Přidat spánek ručně',
+    date: 'Datum',
+    from: 'Od',
+    to: 'Do',
+    qualityLabel: 'Kvalita spánku',
+    qualityPeaceful: '🌿 Klidný',
+    qualityNormal: '😴 Normální',
+    qualityRestless: '🌪️ Neklidný',
+    notePlaceholder: 'Poznámka (volitelné, např. zoubky)',
+    saveSessionBtn: 'Uložit záznam',
+    exportCardTitle: 'Export do Google Drive & Tabulek',
+    exportCardSubtitle: 'Stáhněte nebo sdílejte data ve formátu CSV',
+    exportShareBtn: 'Uložit / Sdílet CSV',
+    copyCSVBtn: 'Kopírovat CSV',
+    copySummaryBtn: 'Souhrn',
+    exportInfo: 'Vygenerovaný soubor CSV obsahuje UTF-8 kódování a lze jej přímo nahrát na Google Drive nebo otevřít v Google Tabulkách.',
+    historyTitle: 'Historie spánků',
+    latestFirst: 'Nejnovější nahoře',
+    noHistory: 'Zatím nemáte zaznamenaný žádný spánek. Klepněte výše na "Děťátko právě usnulo".',
+    deleteTitle: 'Smazat',
+    saveWakeUpModal: 'Uložit probuzení',
+    howWasSleep: 'Jak děťátko spalo?',
+    discard: 'Zahodit',
+    saveToHistory: 'Uložit do historie',
+    noteModalPlaceholder: 'Např. klidný spánek bez buzení',
+    toastTrackingStarted: 'Spánek se začal zaznamenávat 🌙',
+    toastSessionSaved: 'Spánek byl úspěšně uložen! ✨',
+    toastSessionAdded: 'Záznam přidán do historie',
+    toastSessionRemoved: 'Záznam smazán',
+    toastCsvStarted: 'Ukládání CSV spuštěno',
+    toastCsvShared: 'Sdíleno do Google Drive / aplikace',
+    toastShared: 'Sdíleno do aplikace',
+    toastCsvDownloaded: 'CSV staženo – připraveno pro Google Drive / Tabulky',
+    toastCsvCopied: 'CSV zkopírováno (můžete vložit do Tabulek)',
+    toastSummaryCopied: 'Souhrn zkopírován do schránky',
+    csvHeaders: {
+      date: 'Datum',
+      startTime: 'Čas začátku',
+      endTime: 'Čas konce',
+      durationMinutes: 'Trvání (minuty)',
+      durationFormat: 'Trvání (formát)',
+      sleepType: 'Typ spánku',
+      sleepQuality: 'Kvalita spánku',
+      note: 'Poznámka',
+    },
+    csvSummary: {
+      title: '📊 Souhrn spánkového režimu',
+      todayTotal: 'Dnes celkem:',
+      napsCount: 'spánků',
+      recentRecords: 'Poslední záznamy:',
+    },
+  },
+  en: {
+    currentStatus: 'Current Status',
+    babySleeping: 'Baby is sleeping',
+    babyAwake: 'Awake',
+    fellAsleepAt: 'Fell asleep at',
+    timerBackgroundHint: 'Timer keeps running in background even if you close the app.',
+    babyWokeUpBtn: 'Baby woke up',
+    heroTitle: 'One-tap Sleep Tracker',
+    heroSubtitle: 'Start the sleep timer as soon as baby falls asleep.',
+    babyFellAsleepBtn: 'Baby just fell asleep',
+    wakeWindow: 'Wake window:',
+    sinceLastSleep: 'Since last sleep',
+    todayTotal: 'Today total',
+    todayNaps: 'Naps today',
+    sessionsCount: 'sessions',
+    dayNap: 'Day nap',
+    nightSleep: 'Night sleep',
+    average: 'Average',
+    addManualBtn: 'Add sleep session manually',
+    date: 'Date',
+    from: 'From',
+    to: 'To',
+    qualityLabel: 'Sleep quality',
+    qualityPeaceful: '🌿 Calm',
+    qualityNormal: '😴 Normal',
+    qualityRestless: '🌪️ Restless',
+    notePlaceholder: 'Note (optional, e.g. teething)',
+    saveSessionBtn: 'Save session',
+    exportCardTitle: 'Export to Google Drive & Sheets',
+    exportCardSubtitle: 'Download or share sessions as CSV',
+    exportShareBtn: 'Save / Share CSV',
+    copyCSVBtn: 'Copy CSV',
+    copySummaryBtn: 'Summary',
+    exportInfo: 'Exported CSV includes UTF-8 encoding and can be opened directly in Google Drive or Google Sheets.',
+    historyTitle: 'Sleep History',
+    latestFirst: 'Latest first',
+    noHistory: 'No sleep sessions recorded yet. Tap "Baby just fell asleep" above.',
+    deleteTitle: 'Delete',
+    saveWakeUpModal: 'Save wake up',
+    howWasSleep: 'How was the sleep?',
+    discard: 'Discard',
+    saveToHistory: 'Save to history',
+    noteModalPlaceholder: 'e.g. slept peacefully without waking',
+    toastTrackingStarted: 'Sleep tracking started 🌙',
+    toastSessionSaved: 'Sleep session saved! ✨',
+    toastSessionAdded: 'Session added to history',
+    toastSessionRemoved: 'Session removed',
+    toastCsvStarted: 'CSV export started',
+    toastCsvShared: 'Export shared to Google Drive / app',
+    toastShared: 'Shared to app',
+    toastCsvDownloaded: 'CSV downloaded – ready for Google Drive / Sheets',
+    toastCsvCopied: 'CSV copied to clipboard',
+    toastSummaryCopied: 'Summary copied to clipboard',
+    csvHeaders: {
+      date: 'Date',
+      startTime: 'Start time',
+      endTime: 'End time',
+      durationMinutes: 'Duration (minutes)',
+      durationFormat: 'Duration (formatted)',
+      sleepType: 'Sleep type',
+      sleepQuality: 'Sleep quality',
+      note: 'Note',
+    },
+    csvSummary: {
+      title: '📊 Sleep Schedule Summary',
+      todayTotal: 'Today total:',
+      napsCount: 'naps',
+      recentRecords: 'Recent records:',
+    },
+  },
+  pl: {
+    currentStatus: 'Aktualny stan',
+    babySleeping: 'Dzidziuś śpi',
+    babyAwake: 'Czuwa',
+    fellAsleepAt: 'Zasnął o',
+    timerBackgroundHint: 'Stoper działa w tle, możesz spokojnie zamknąć aplikację.',
+    babyWokeUpBtn: 'Dzidziuś się obudził',
+    heroTitle: 'Rejestracja snu jednym dotknięciem',
+    heroSubtitle: 'Gdy tylko ułożysz malucha, włącz stoper snu.',
+    babyFellAsleepBtn: 'Dzidziuś właśnie zasnął',
+    wakeWindow: 'Czas czuwania:',
+    sinceLastSleep: 'Od ostatniego snu',
+    todayTotal: 'Dzisiaj przespane',
+    todayNaps: 'Dzisiejsze drzemki',
+    sessionsCount: 'sesje',
+    dayNap: 'Drzemka dzienna',
+    nightSleep: 'Sen nocny',
+    average: 'Średnia',
+    addManualBtn: 'Dodaj sen ręcznie',
+    date: 'Data',
+    from: 'Od',
+    to: 'Do',
+    qualityLabel: 'Jakość snu',
+    qualityPeaceful: '🌿 Spokojny',
+    qualityNormal: '😴 Normalny',
+    qualityRestless: '🌪️ Niespokojny',
+    notePlaceholder: 'Notatka (opcjonalnie, np. ząbkowanie)',
+    saveSessionBtn: 'Zapisz wpis',
+    exportCardTitle: 'Eksport do Dysku Google i Arkuszy',
+    exportCardSubtitle: 'Pobierz lub udostępnij dane w formacie CSV',
+    exportShareBtn: 'Zapisz / Udostępnij CSV',
+    copyCSVBtn: 'Kopiuj CSV',
+    copySummaryBtn: 'Podsumowanie',
+    exportInfo: 'Wygenerowany plik CSV ma kodowanie UTF-8 i można go bezpośrednio przesłać na Dysk Google lub otworzyć w Arkuszach.',
+    historyTitle: 'Historia snu',
+    latestFirst: 'Najnowsze na górze',
+    noHistory: 'Nie zarejestrowano jeszcze snu. Dotknij wyżej "Dzidziuś właśnie zasnął".',
+    deleteTitle: 'Usuń',
+    saveWakeUpModal: 'Zapisz wybudzenie',
+    howWasSleep: 'Jak spał maluch?',
+    discard: 'Odrzuć',
+    saveToHistory: 'Zapisz do historii',
+    noteModalPlaceholder: 'Np. spokojny sen bez wybudzeń',
+    toastTrackingStarted: 'Rozpoczęto rejestrowanie snu 🌙',
+    toastSessionSaved: 'Sen został pomyślnie zapisany! ✨',
+    toastSessionAdded: 'Wpis dodany do historii',
+    toastSessionRemoved: 'Wpis usunięty',
+    toastCsvStarted: 'Rozpoczęto eksport CSV',
+    toastCsvShared: 'Udostępniono do Dysku Google / aplikacji',
+    toastShared: 'Udostępniono do aplikacji',
+    toastCsvDownloaded: 'CSV pobrane – gotowe do Dysku Google / Arkuszy',
+    toastCsvCopied: 'CSV skopiowane (możesz wkleić do Arkuszy)',
+    toastSummaryCopied: 'Podsumowanie skopiowane do schowka',
+    csvHeaders: {
+      date: 'Data',
+      startTime: 'Czas rozpoczęcia',
+      endTime: 'Czas zakończenia',
+      durationMinutes: 'Czas trwania (minuty)',
+      durationFormat: 'Czas trwania (format)',
+      sleepType: 'Rodzaj snu',
+      sleepQuality: 'Jakość snu',
+      note: 'Notatka',
+    },
+    csvSummary: {
+      title: '📊 Podsumowanie harmonogramu snu',
+      todayTotal: 'Dzisiaj łącznie:',
+      napsCount: 'drzemek',
+      recentRecords: 'Ostatnie wpisy:',
+    },
+  },
+  hu: {
+    currentStatus: 'Jelenlegi állapot',
+    babySleeping: 'A baba alszik',
+    babyAwake: 'Ébren van',
+    fellAsleepAt: 'Elaludt:',
+    timerBackgroundHint: 'Az időzítő a háttérben fut, bezárhatja az alkalmazást.',
+    babyWokeUpBtn: 'A baba felébredt',
+    heroTitle: 'Alvás rögzítése egy érintéssel',
+    heroSubtitle: 'Amint lefekteti a babát, indítsa el az alvásidőzítőt.',
+    babyFellAsleepBtn: 'A baba épp most aludt el',
+    wakeWindow: 'Ébrenléti ablak:',
+    sinceLastSleep: 'Legutóbbi alvás óta',
+    todayTotal: 'Ma átaludt idő',
+    todayNaps: 'Mai alvások',
+    sessionsCount: 'alkalom',
+    dayNap: 'Nappali alvás',
+    nightSleep: 'Éjszakai alvás',
+    average: 'Átlag',
+    addManualBtn: 'Alvás hozzáadása manuálisan',
+    date: 'Dátum',
+    from: 'Ettől',
+    to: 'Eddig',
+    qualityLabel: 'Alvás minősége',
+    qualityPeaceful: '🌿 Nyugodt',
+    qualityNormal: '😴 Normál',
+    qualityRestless: '🌪️ Nyugtalan',
+    notePlaceholder: 'Megjegyzés (pl. fogzás)',
+    saveSessionBtn: 'Bejegyzés mentése',
+    exportCardTitle: 'Exportálás Google Drive-ra és Táblázatokba',
+    exportCardSubtitle: 'Adatok letöltése vagy megosztása CSV formátumban',
+    exportShareBtn: 'CSV mentése / megosztása',
+    copyCSVBtn: 'CSV másolása',
+    copySummaryBtn: 'Összegzés',
+    exportInfo: 'A CSV fájl UTF-8 kódolású, közvetlenül feltölthető a Google Drive-ra vagy megnyitható a Google Táblázatokban.',
+    historyTitle: 'Alvástörténet',
+    latestFirst: 'Legfrissebb felül',
+    noHistory: 'Még nincs rögzített alvás. Érintse meg fent a "A baba épp most aludt el" gombot.',
+    deleteTitle: 'Törlés',
+    saveWakeUpModal: 'Ébredés mentése',
+    howWasSleep: 'Hogy aludt a baba?',
+    discard: 'Elvetés',
+    saveToHistory: 'Mentés a történetbe',
+    noteModalPlaceholder: 'Pl. ébredés nélkül, nyugodtan aludt',
+    toastTrackingStarted: 'Alváskövetés elindítva 🌙',
+    toastSessionSaved: 'Alvás sikeresen elmentve! ✨',
+    toastSessionAdded: 'Bejegyzés hozzáadva a történethez',
+    toastSessionRemoved: 'Bejegyzés törölve',
+    toastCsvStarted: 'CSV exportálás elindítva',
+    toastCsvShared: 'Megosztva Google Drive-ra / alkalmazásba',
+    toastShared: 'Megosztva alkalmazásba',
+    toastCsvDownloaded: 'CSV letöltve – készen áll a Google Drive / Táblázatokhoz',
+    toastCsvCopied: 'CSV másolva (beilleszthető a Táblázatokba)',
+    toastSummaryCopied: 'Összegzés másolva a vágólapra',
+    csvHeaders: {
+      date: 'Dátum',
+      startTime: 'Kezdési idő',
+      endTime: 'Befejezési idő',
+      durationMinutes: 'Időtartam (perc)',
+      durationFormat: 'Időtartam (formázott)',
+      sleepType: 'Alvás típusa',
+      sleepQuality: 'Alvás minősége',
+      note: 'Megjegyzés',
+    },
+    csvSummary: {
+      title: '📊 Alvási rend összegzése',
+      todayTotal: 'Ma összesen:',
+      napsCount: 'alvás',
+      recentRecords: 'Legutóbbi bejegyzések:',
+    },
+  },
+  uk: {
+    currentStatus: 'Поточний стан',
+    babySleeping: 'Дитина спить',
+    babyAwake: 'Не спить',
+    fellAsleepAt: 'Заснув о',
+    timerBackgroundHint: 'Таймер працює у фоновому режимі, можна згорнути додаток.',
+    babyWokeUpBtn: 'Дитина прокинулася',
+    heroTitle: 'Запис сну в один дотик',
+    heroSubtitle: 'Щойно покладете малюка, запустіть таймер сну.',
+    babyFellAsleepBtn: 'Дитина щойно заснула',
+    wakeWindow: 'Вікно неспання:',
+    sinceLastSleep: 'З останнього сну',
+    todayTotal: 'Сьогодні поспав',
+    todayNaps: 'Сни за сьогодні',
+    sessionsCount: 'записів',
+    dayNap: 'Денний сон',
+    nightSleep: 'Нічний сон',
+    average: 'Середнє',
+    addManualBtn: 'Додати сон вручну',
+    date: 'Дата',
+    from: 'З',
+    to: 'До',
+    qualityLabel: 'Якість сну',
+    qualityPeaceful: '🌿 Спокійний',
+    qualityNormal: '😴 Нормальний',
+    qualityRestless: '🌪️ Неспокійний',
+    notePlaceholder: 'Примітка (напр., ріжуться зубки)',
+    saveSessionBtn: 'Зберегти запис',
+    exportCardTitle: 'Експорт у Google Диск та Таблиці',
+    exportCardSubtitle: 'Завантажити або поділитися даними CSV',
+    exportShareBtn: 'Зберегти / Поділитися CSV',
+    copyCSVBtn: 'Копіювати CSV',
+    copySummaryBtn: 'Підсумок',
+    exportInfo: 'Створений CSV файл має кодування UTF-8 і може бути завантажений на Google Диск чи відкритий у Google Таблицях.',
+    historyTitle: 'Історія сну',
+    latestFirst: 'Спочатку найновіші',
+    noHistory: 'Ще немає записів сну. Натисніть вище "Дитина щойно заснула".',
+    deleteTitle: 'Видалити',
+    saveWakeUpModal: 'Зберегти пробудження',
+    howWasSleep: 'Як спала дитина?',
+    discard: 'Скасувати',
+    saveToHistory: 'Зберегти в історію',
+    noteModalPlaceholder: 'Напр., спокійний сон без прокидань',
+    toastTrackingStarted: 'Відстеження сну розпочато 🌙',
+    toastSessionSaved: 'Сон успішно збережено! ✨',
+    toastSessionAdded: 'Запис додано до історії',
+    toastSessionRemoved: 'Запис видалено',
+    toastCsvStarted: 'Експорт CSV розпочато',
+    toastCsvShared: 'Поділилися в Google Диск / додаток',
+    toastShared: 'Поділилися в додаток',
+    toastCsvDownloaded: 'CSV завантажено – готово для Google Диска / Таблиць',
+    toastCsvCopied: 'CSV скопійовано (можна вставити в Таблиці)',
+    toastSummaryCopied: 'Підсумок скопійовано в буфер',
+    csvHeaders: {
+      date: 'Дата',
+      startTime: 'Час початку',
+      endTime: 'Час закінчення',
+      durationMinutes: 'Тривалість (хвилини)',
+      durationFormat: 'Тривалість (формат)',
+      sleepType: 'Тип сну',
+      sleepQuality: 'Якість сну',
+      note: 'Примітка',
+    },
+    csvSummary: {
+      title: '📊 Підсумок режиму сну',
+      todayTotal: 'Сьогодні разом:',
+      napsCount: 'снів',
+      recentRecords: 'Останні записи:',
+    },
+  },
+  it: {
+    currentStatus: 'Stato attuale',
+    babySleeping: 'Il bimbo dorme',
+    babyAwake: 'Sveglio',
+    fellAsleepAt: 'Si è addormentato alle',
+    timerBackgroundHint: "Il timer funziona in background, puoi chiudere l'app.",
+    babyWokeUpBtn: 'Il bimbo si è svegliato',
+    heroTitle: 'Registra sonno con un tocco',
+    heroSubtitle: 'Appena metti a letto il bimbo, avvia il timer.',
+    babyFellAsleepBtn: 'Il bimbo si è appena addormentato',
+    wakeWindow: 'Finestra di veglia:',
+    sinceLastSleep: "Dall'ultimo sonno",
+    todayTotal: 'Dormito oggi',
+    todayNaps: 'Sonni di oggi',
+    sessionsCount: 'sessioni',
+    dayNap: 'Pisolino diurno',
+    nightSleep: 'Sonno notturno',
+    average: 'Media',
+    addManualBtn: 'Aggiungi sonno manualmente',
+    date: 'Data',
+    from: 'Dalle',
+    to: 'Alle',
+    qualityLabel: 'Qualità del sonno',
+    qualityPeaceful: '🌿 Tranquillo',
+    qualityNormal: '😴 Normale',
+    qualityRestless: '🌪️ Agitato',
+    notePlaceholder: 'Nota (opzionale, es. dentizione)',
+    saveSessionBtn: 'Salva sessione',
+    exportCardTitle: 'Esporta su Google Drive e Fogli',
+    exportCardSubtitle: 'Scarica o condividi dati in CSV',
+    exportShareBtn: 'Salva / Condividi CSV',
+    copyCSVBtn: 'Copia CSV',
+    copySummaryBtn: 'Riepilogo',
+    exportInfo: 'Il file CSV generato include codifica UTF-8 ed è pronto per Google Drive o Fogli Google.',
+    historyTitle: 'Cronologia del sonno',
+    latestFirst: 'I più recenti in alto',
+    noHistory: 'Nessun sonno registrato finora. Tocca sopra "Il bimbo si è appena addormentato".',
+    deleteTitle: 'Elimina',
+    saveWakeUpModal: 'Salva risveglio',
+    howWasSleep: 'Come ha dormito il bimbo?',
+    discard: 'Annulla',
+    saveToHistory: 'Salva nella cronologia',
+    noteModalPlaceholder: 'Es. sonno tranquillo senza risvegli',
+    toastTrackingStarted: 'Registrazione sonno avviata 🌙',
+    toastSessionSaved: 'Sonno salvato con successo! ✨',
+    toastSessionAdded: 'Sessione aggiunta alla cronologia',
+    toastSessionRemoved: 'Sessione eliminata',
+    toastCsvStarted: 'Esportazione CSV avviata',
+    toastCsvShared: 'Condiviso su Google Drive / app',
+    toastShared: "Condiviso con l'app",
+    toastCsvDownloaded: 'CSV scaricato – pronto per Google Drive / Fogli',
+    toastCsvCopied: 'CSV copiato negli appunti',
+    toastSummaryCopied: 'Riepilogo copiato negli appunti',
+    csvHeaders: {
+      date: 'Data',
+      startTime: 'Ora inizio',
+      endTime: 'Ora fine',
+      durationMinutes: 'Durata (minuti)',
+      durationFormat: 'Durata (formattata)',
+      sleepType: 'Tipo di sonno',
+      sleepQuality: 'Qualità del sonno',
+      note: 'Nota',
+    },
+    csvSummary: {
+      title: '📊 Riepilogo del sonno',
+      todayTotal: 'Oggi totale:',
+      napsCount: 'sonni',
+      recentRecords: 'Registrazioni recenti:',
+    },
+  },
+};
+
+const dateLocales: Record<Language, string> = {
+  sk: 'sk-SK',
+  cs: 'cs-CZ',
+  en: 'en-US',
+  pl: 'pl-PL',
+  hu: 'hu-HU',
+  uk: 'uk-UA',
+  it: 'it-IT',
+};
+
 export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ language }) => {
-  const t = translations[language];
+  const texts = scheduleTexts[language] || scheduleTexts.en;
+  const currentLocale = dateLocales[language] || 'en-US';
 
   // Load sessions from localStorage or seed initial sample
   const [sessions, setSessions] = useState<SleepSession[]>(() => {
@@ -57,7 +630,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
         durationMinutes: 105,
         type: 'day-nap',
         quality: 'peaceful',
-        notes: 'Zaspal rýchlo po prechádzke na čerstvom vzduchu',
+        notes: language === 'sk' ? 'Zaspal rýchlo po prechádzke' : 'Fell asleep quickly after a walk',
       },
       {
         id: 'sample-2',
@@ -66,7 +639,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
         durationMinutes: 630,
         type: 'night-sleep',
         quality: 'normal',
-        notes: 'Jedno nočné zobudenie na čajík',
+        notes: language === 'sk' ? 'Kľudná noc' : 'Peaceful night',
       },
     ];
   });
@@ -145,6 +718,30 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  // Helper for quality badge labels
+  const getQualityText = (q: SleepQuality) => {
+    switch (q) {
+      case 'peaceful':
+        return texts.qualityPeaceful;
+      case 'normal':
+        return texts.qualityNormal;
+      case 'restless':
+        return texts.qualityRestless;
+    }
+  };
+
+  // Helper for quality name without emoji for CSV
+  const getQualityPlain = (q: SleepQuality) => {
+    switch (q) {
+      case 'peaceful':
+        return texts.qualityPeaceful.replace(/^[^\w\u00C0-\u024F\u0400-\u04FF]+\s*/, '');
+      case 'normal':
+        return texts.qualityNormal.replace(/^[^\w\u00C0-\u024F\u0400-\u04FF]+\s*/, '');
+      case 'restless':
+        return texts.qualityRestless.replace(/^[^\w\u00C0-\u024F\u0400-\u04FF]+\s*/, '');
+    }
+  };
+
   // 1. Live Sleep: Baby fell asleep
   const handleBabyFellAsleep = () => {
     triggerHaptic('heavy');
@@ -155,7 +752,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
     } catch {
       // ignore
     }
-    showToast(language === 'sk' ? 'Spánok sa začal zaznamenávať 🌙' : 'Sleep tracking started 🌙');
+    showToast(texts.toastTrackingStarted);
   };
 
   // 2. Live Sleep: Baby woke up
@@ -206,7 +803,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
     }
     setWakeModalOpen(false);
     setPendingEndSession(null);
-    showToast(language === 'sk' ? 'Spánok bol úspešne uložený! ✨' : 'Sleep session saved! ✨');
+    showToast(texts.toastSessionSaved);
   };
 
   // Cancel ongoing sleep without saving
@@ -250,14 +847,14 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
     setSessions((prev) => [newSession, ...prev]);
     setShowManualForm(false);
     setManualNotes('');
-    showToast(language === 'sk' ? 'Záznam pridaný do histórie' : 'Session added to history');
+    showToast(texts.toastSessionAdded);
   };
 
   // Delete a session
   const handleDeleteSession = (id: string) => {
     triggerHaptic('light');
     setSessions((prev) => prev.filter((s) => s.id !== id));
-    showToast(language === 'sk' ? 'Záznam vymazaný' : 'Session removed');
+    showToast(texts.toastSessionRemoved);
   };
 
   // Format minutes into "1h 30m"
@@ -305,29 +902,25 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
   // Generate CSV formatted content with UTF-8 BOM
   const generateCSVContent = () => {
     const headers = [
-      'Dátum',
-      'Čas začiatku',
-      'Čas konca',
-      'Trvanie (minúty)',
-      'Trvanie (formát)',
-      'Typ spánku',
-      'Kvalita spánku',
-      'Poznámka',
+      texts.csvHeaders.date,
+      texts.csvHeaders.startTime,
+      texts.csvHeaders.endTime,
+      texts.csvHeaders.durationMinutes,
+      texts.csvHeaders.durationFormat,
+      texts.csvHeaders.sleepType,
+      texts.csvHeaders.sleepQuality,
+      texts.csvHeaders.note,
     ];
 
     const rows = sessions.map((s) => {
       const startDate = new Date(s.startTime);
       const endDate = new Date(s.endTime);
-      const dateStr = startDate.toLocaleDateString('sk-SK');
-      const startStr = startDate.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' });
-      const endStr = endDate.toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' });
+      const dateStr = startDate.toLocaleDateString(currentLocale);
+      const startStr = startDate.toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' });
+      const endStr = endDate.toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' });
       const durationFmt = formatDuration(s.durationMinutes);
-      const typeStr = s.type === 'day-nap' ? 'Denný spánok' : 'Nočný spánok';
-      const qualityMap: Record<SleepQuality, string> = {
-        peaceful: 'Kľudný',
-        normal: 'Normálny',
-        restless: 'Nepokojný',
-      };
+      const typeStr = s.type === 'day-nap' ? texts.dayNap : texts.nightSleep;
+      const qualityStr = getQualityPlain(s.quality);
       const noteClean = (s.notes || '').replace(/"/g, '""');
 
       return [
@@ -337,7 +930,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
         s.durationMinutes,
         `"${durationFmt}"`,
         `"${typeStr}"`,
-        `"${qualityMap[s.quality] || s.quality}"`,
+        `"${qualityStr}"`,
         `"${noteClean}"`,
       ].join(',');
     });
@@ -349,7 +942,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
   const handleExportCSV = async () => {
     triggerHaptic('medium');
     const csvContent = generateCSVContent();
-    const filename = `detsky-spankovy-rezim-${todayDateStr}.csv`;
+    const filename = `baby-sleep-tracker-${todayDateStr}.csv`;
 
     // 1. Android Capacitor Native Platform Check (installed APK)
     if (Capacitor.isNativePlatform()) {
@@ -362,13 +955,13 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
         });
 
         await Share.share({
-          title: 'Detský spánkový režim - Export',
-          text: 'Záznamy spánkového režimu (CSV pre Google Drive / Tabuľky)',
+          title: texts.exportCardTitle,
+          text: texts.exportCardSubtitle,
           url: writtenFile.uri,
-          dialogTitle: 'Uložiť do Google Drive / Súbory',
+          dialogTitle: texts.exportShareBtn,
         });
 
-        showToast(language === 'sk' ? 'Ukladanie CSV spustené' : 'CSV export started');
+        showToast(texts.toastCsvStarted);
         return;
       } catch (nativeErr) {
         console.warn('Capacitor native export error, falling back:', nativeErr);
@@ -382,11 +975,11 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
         const file = new File([blob], filename, { type: 'text/csv' });
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
-            title: 'Detský spánkový režim - Export',
-            text: 'Záznamy spánkového režimu pre Google Drive / Tabuľky',
+            title: texts.exportCardTitle,
+            text: texts.exportCardSubtitle,
             files: [file],
           });
-          showToast(language === 'sk' ? 'Zdieľané do Google Drive / aplikácie' : 'Export shared');
+          showToast(texts.toastCsvShared);
           return;
         }
       }
@@ -398,10 +991,10 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
     try {
       if (typeof navigator !== 'undefined' && 'share' in navigator) {
         await navigator.share({
-          title: 'Detský spánkový režim (CSV)',
+          title: texts.exportCardTitle,
           text: csvContent,
         });
-        showToast(language === 'sk' ? 'Zdieľané do aplikácie' : 'Shared');
+        showToast(texts.toastShared);
         return;
       }
     } catch {
@@ -418,11 +1011,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 2000);
-      showToast(
-        language === 'sk'
-          ? 'CSV stiahnuté – pripravené pre Google Drive / Tabuľky'
-          : 'CSV downloaded – ready for Google Drive / Sheets'
-      );
+      showToast(texts.toastCsvDownloaded);
       return;
     } catch {
       // 5. Data URI fallback
@@ -441,11 +1030,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
     triggerHaptic('light');
     const csvContent = generateCSVContent();
     navigator.clipboard.writeText(csvContent).then(() => {
-      showToast(
-        language === 'sk'
-          ? 'CSV skopírované (môžete vložiť do Tabuliek)'
-          : 'CSV copied to clipboard'
-      );
+      showToast(texts.toastCsvCopied);
     });
   };
 
@@ -453,20 +1038,21 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
   const handleCopySummary = () => {
     triggerHaptic('light');
     const summaryLines = [
-      `📊 Súhrn spánkového režimu (${todayDateStr})`,
-      `Dnes celkovo: ${formatDuration(todayTotalMins)} (${todaySessions.length} spánkov)`,
+      `${texts.csvSummary.title} (${todayDateStr})`,
+      `${texts.csvSummary.todayTotal} ${formatDuration(todayTotalMins)} (${todaySessions.length} ${texts.csvSummary.napsCount})`,
       '',
-      'Posledné záznamy:',
+      texts.csvSummary.recentRecords,
       ...sessions.slice(0, 5).map((s) => {
-        const d = new Date(s.startTime).toLocaleDateString('sk-SK');
-        const st = new Date(s.startTime).toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' });
-        const et = new Date(s.endTime).toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' });
-        return `• ${d} [${st} – ${et}] ${formatDuration(s.durationMinutes)} (${s.type === 'day-nap' ? 'Denný' : 'Nočný'})${s.notes ? ` - ${s.notes}` : ''}`;
+        const d = new Date(s.startTime).toLocaleDateString(currentLocale);
+        const st = new Date(s.startTime).toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' });
+        const et = new Date(s.endTime).toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' });
+        const typeStr = s.type === 'day-nap' ? texts.dayNap : texts.nightSleep;
+        return `• ${d} [${st} – ${et}] ${formatDuration(s.durationMinutes)} (${typeStr})${s.notes ? ` - ${s.notes}` : ''}`;
       }),
     ];
 
     navigator.clipboard.writeText(summaryLines.join('\n')).then(() => {
-      showToast(language === 'sk' ? 'Súhrn skopírovaný do schránky' : 'Summary copied to clipboard');
+      showToast(texts.toastSummaryCopied);
     });
   };
 
@@ -487,18 +1073,18 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-indigo-300 text-xs font-semibold uppercase tracking-wider">
             <Sparkles className="w-4 h-4 text-indigo-400" />
-            <span>{language === 'sk' ? 'Aktuálny stav' : 'Current Status'}</span>
+            <span>{texts.currentStatus}</span>
           </div>
 
           {activeSleepStart ? (
             <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center gap-1.5 animate-pulse">
               <span className="w-2 h-2 rounded-full bg-amber-400" />
-              {language === 'sk' ? 'Dieťatko spí' : 'Baby is sleeping'}
+              {texts.babySleeping}
             </span>
           ) : (
             <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/10 text-white/70 border border-white/10 flex items-center gap-1.5">
               <Sun className="w-3.5 h-3.5 text-amber-300" />
-              {language === 'sk' ? 'Bdie' : 'Awake'}
+              {texts.babyAwake}
             </span>
           )}
         </div>
@@ -507,16 +1093,14 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
         {activeSleepStart ? (
           <div className="flex flex-col items-center justify-center py-4 text-center">
             <span className="text-xs text-indigo-200/70 mb-1">
-              {language === 'sk' ? 'Zaspalo o' : 'Fell asleep at'}{' '}
+              {texts.fellAsleepAt}{' '}
               {new Date(activeSleepStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
             <div className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white font-mono drop-shadow">
               {formatLiveClock(activeElapsedSec)}
             </div>
             <p className="text-[11px] text-white/50 mt-1 max-w-xs">
-              {language === 'sk'
-                ? 'Časovač beží na pozadí, pokojne môžete aplikáciu zatvoriť.'
-                : 'Timer keeps running in background even if you switch apps.'}
+              {texts.timerBackgroundHint}
             </p>
 
             <button
@@ -524,18 +1108,16 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
               className="mt-5 w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 active:scale-95 touch-manipulation transition-all"
             >
               <Sun className="w-5 h-5 fill-slate-950" />
-              <span>{language === 'sk' ? 'Dieťatko sa zobudilo' : 'Baby woke up'}</span>
+              <span>{texts.babyWokeUpBtn}</span>
             </button>
           </div>
         ) : (
           <div className="flex flex-col py-1">
             <h2 className="text-lg font-bold text-white tracking-wide">
-              {language === 'sk' ? 'Zaznamenať spánok jedným ťuknutím' : 'One-tap Sleep Tracker'}
+              {texts.heroTitle}
             </h2>
             <p className="text-xs text-white/60 mt-0.5 mb-4">
-              {language === 'sk'
-                ? 'Hneď ako uložíte dieťatko, spustite stopky spánku.'
-                : 'Start the sleep timer as soon as baby falls asleep.'}
+              {texts.heroSubtitle}
             </p>
 
             <button
@@ -543,7 +1125,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
               className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 active:scale-95 touch-manipulation transition-all"
             >
               <Moon className="w-5 h-5 fill-indigo-200" />
-              <span>{language === 'sk' ? 'Dieťatko práve zaspalo' : 'Baby just fell asleep'}</span>
+              <span>{texts.babyFellAsleepBtn}</span>
             </button>
           </div>
         )}
@@ -553,12 +1135,12 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
           <div className="mt-3.5 pt-3 border-t border-white/10 flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5 text-white/70">
               <Clock className="w-3.5 h-3.5 text-indigo-300" />
-              <span>{language === 'sk' ? 'Bdelé okno:' : 'Wake window:'}</span>
+              <span>{texts.wakeWindow}</span>
               <strong className="text-white font-semibold">{formatDuration(wakeWindowMins)}</strong>
             </div>
 
             <span className="text-[10px] text-white/50 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
-              {language === 'sk' ? 'Od posledného spánku' : 'Since last sleep'}
+              {texts.sinceLastSleep}
             </span>
           </div>
         )}
@@ -575,7 +1157,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
             </div>
             <div className="min-w-0">
               <span className="text-[10px] uppercase tracking-wider text-white/50 block font-semibold truncate">
-                {language === 'sk' ? 'Dnes naspaté' : 'Today total'}
+                {texts.todayTotal}
               </span>
               <span className="text-base sm:text-lg font-bold text-white tracking-tight truncate block">
                 {todayTotalMins > 0 ? formatDuration(todayTotalMins) : '0 min'}
@@ -590,12 +1172,12 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
             </div>
             <div className="min-w-0">
               <span className="text-[10px] uppercase tracking-wider text-white/50 block font-semibold truncate">
-                {language === 'sk' ? 'Dnešné spánky' : 'Naps today'}
+                {texts.todayNaps}
               </span>
               <span className="text-base sm:text-lg font-bold text-white tracking-tight truncate block">
                 {todaySessions.length}{' '}
                 <span className="text-xs font-normal text-white/50">
-                  {language === 'sk' ? 'záznamy' : 'sessions'}
+                  {texts.sessionsCount}
                 </span>
               </span>
             </div>
@@ -607,7 +1189,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
           <div className="pt-2.5 border-t border-white/5 grid grid-cols-3 gap-1 text-[11px] text-white/60">
             <div className="flex flex-col">
               <span className="text-[9px] uppercase tracking-wider text-white/40">
-                {language === 'sk' ? 'Denný spánok' : 'Day nap'}
+                {texts.dayNap}
               </span>
               <span className="font-semibold text-white/80">
                 {formatDuration(todayNapMins)}
@@ -615,7 +1197,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
             </div>
             <div className="flex flex-col">
               <span className="text-[9px] uppercase tracking-wider text-white/40">
-                {language === 'sk' ? 'Nočný spánok' : 'Night sleep'}
+                {texts.nightSleep}
               </span>
               <span className="font-semibold text-white/80">
                 {formatDuration(todayNightMins)}
@@ -623,7 +1205,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
             </div>
             <div className="flex flex-col">
               <span className="text-[9px] uppercase tracking-wider text-white/40">
-                {language === 'sk' ? 'Priemer' : 'Average'}
+                {texts.average}
               </span>
               <span className="font-semibold text-white/80">
                 {formatDuration(todayAvgMins)}
@@ -644,7 +1226,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
         >
           <div className="flex items-center gap-2">
             <Plus className="w-4 h-4 text-indigo-400" />
-            <span>{language === 'sk' ? 'Pridať spánok ručne' : 'Add sleep session manually'}</span>
+            <span>{texts.addManualBtn}</span>
           </div>
           <ChevronDown
             className={`w-4 h-4 text-white/50 transition-transform duration-200 ${
@@ -658,7 +1240,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
             <div className="grid grid-cols-3 gap-2">
               <div className="col-span-1">
                 <label className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">
-                  {language === 'sk' ? 'Dátum' : 'Date'}
+                  {texts.date}
                 </label>
                 <input
                   type="date"
@@ -671,7 +1253,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
 
               <div>
                 <label className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">
-                  {language === 'sk' ? 'Od' : 'Start'}
+                  {texts.from}
                 </label>
                 <input
                   type="time"
@@ -684,7 +1266,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
 
               <div>
                 <label className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">
-                  {language === 'sk' ? 'Do' : 'End'}
+                  {texts.to}
                 </label>
                 <input
                   type="time"
@@ -708,7 +1290,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
                 }`}
               >
                 <Sun className="w-3.5 h-3.5" />
-                <span>{language === 'sk' ? 'Denný spánok' : 'Day nap'}</span>
+                <span>{texts.dayNap}</span>
               </button>
 
               <button
@@ -721,37 +1303,30 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
                 }`}
               >
                 <Moon className="w-3.5 h-3.5" />
-                <span>{language === 'sk' ? 'Nočný spánok' : 'Night sleep'}</span>
+                <span>{texts.nightSleep}</span>
               </button>
             </div>
 
             {/* Quality selector */}
             <div>
               <label className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">
-                {language === 'sk' ? 'Kvalita spánku' : 'Sleep quality'}
+                {texts.qualityLabel}
               </label>
               <div className="grid grid-cols-3 gap-1.5 text-xs">
-                {(['peaceful', 'normal', 'restless'] as SleepQuality[]).map((q) => {
-                  const labels = {
-                    peaceful: language === 'sk' ? '🌿 Kľudný' : '🌿 Calm',
-                    normal: language === 'sk' ? '😴 Normálny' : '😴 Normal',
-                    restless: language === 'sk' ? '🌪️ Nepokojný' : '🌪️ Restless',
-                  };
-                  return (
-                    <button
-                      key={q}
-                      type="button"
-                      onClick={() => setManualQuality(q)}
-                      className={`py-1.5 px-1 rounded-xl text-center border text-[11px] font-medium transition-colors ${
-                        manualQuality === q
-                          ? 'bg-white/20 border-white/40 text-white font-bold'
-                          : 'bg-white/5 border-white/10 text-white/60'
-                      }`}
-                    >
-                      {labels[q]}
-                    </button>
-                  );
-                })}
+                {(['peaceful', 'normal', 'restless'] as SleepQuality[]).map((q) => (
+                  <button
+                    key={q}
+                    type="button"
+                    onClick={() => setManualQuality(q)}
+                    className={`py-1.5 px-1 rounded-xl text-center border text-[11px] font-medium transition-colors ${
+                      manualQuality === q
+                        ? 'bg-white/20 border-white/40 text-white font-bold'
+                        : 'bg-white/5 border-white/10 text-white/60'
+                    }`}
+                  >
+                    {getQualityText(q)}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -759,7 +1334,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
             <div>
               <input
                 type="text"
-                placeholder={language === 'sk' ? 'Poznámka (voliteľné, napr. zúbky)' : 'Note (optional)'}
+                placeholder={texts.notePlaceholder}
                 value={manualNotes}
                 onChange={(e) => setManualNotes(e.target.value)}
                 maxLength={100}
@@ -771,7 +1346,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
               type="submit"
               className="mt-1 py-2 rounded-xl bg-white text-slate-950 font-bold text-xs hover:bg-white/90 active:scale-95 transition-all shadow"
             >
-              {language === 'sk' ? 'Uložiť záznam' : 'Save session'}
+              {texts.saveSessionBtn}
             </button>
           </form>
         )}
@@ -794,12 +1369,10 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
             </div>
             <div className="min-w-0">
               <h3 className="text-xs font-bold text-white truncate">
-                {language === 'sk' ? 'Export do Google Drive & Tabuliek' : 'Export to Google Drive / Sheets'}
+                {texts.exportCardTitle}
               </h3>
               <p className="text-[11px] text-white/50 truncate mt-0.5">
-                {language === 'sk'
-                  ? 'Stiahnite alebo zdieľajte dáta vo formáte CSV'
-                  : 'Download or share sessions as CSV'}
+                {texts.exportCardSubtitle}
               </p>
             </div>
           </div>
@@ -822,37 +1395,33 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
                 className="flex-1 min-w-[130px] py-2.5 px-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/40 active:scale-95 transition-all"
               >
                 <Share2 className="w-3.5 h-3.5" />
-                <span>{language === 'sk' ? 'Uložiť / Zdieľať CSV' : 'Save / Share CSV'}</span>
+                <span>{texts.exportShareBtn}</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleCopyRawCSV}
                 className="py-2.5 px-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-medium text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                title={language === 'sk' ? 'Kopírovať tabuľku CSV' : 'Copy CSV'}
+                title={texts.copyCSVBtn}
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{language === 'sk' ? 'Kopírovať CSV' : 'Copy CSV'}</span>
+                <span>{texts.copyCSVBtn}</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleCopySummary}
                 className="py-2.5 px-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-medium text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                title={language === 'sk' ? 'Kopírovať textový súhrn' : 'Copy summary'}
+                title={texts.copySummaryBtn}
               >
                 <Copy className="w-3.5 h-3.5" />
-                <span>{language === 'sk' ? 'Súhrn' : 'Summary'}</span>
+                <span>{texts.copySummaryBtn}</span>
               </button>
             </div>
 
             <div className="flex items-start gap-2 p-2.5 rounded-xl bg-white/5 border border-white/5 text-[10px] text-white/50 leading-relaxed">
               <Info className="w-3.5 h-3.5 shrink-0 text-emerald-400 mt-0.5" />
-              <span>
-                {language === 'sk'
-                  ? 'Vygenerovaný súbor CSV obsahuje UTF-8 diakritiku a dá sa priamo nahrať na Google Drive alebo otvoriť v Google Tabuľkách.'
-                  : 'Exported CSV includes UTF-8 encoding and can be opened directly in Google Drive or Google Sheets.'}
-              </span>
+              <span>{texts.exportInfo}</span>
             </div>
           </div>
         )}
@@ -862,38 +1431,30 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-xs font-bold uppercase tracking-wider text-white/60">
-            {language === 'sk' ? 'História spánkov' : 'Sleep History'} ({sessions.length})
+            {texts.historyTitle} ({sessions.length})
           </h3>
           {sessions.length > 0 && (
             <span className="text-[11px] text-white/40">
-              {language === 'sk' ? 'Najnovšie hore' : 'Latest first'}
+              {texts.latestFirst}
             </span>
           )}
         </div>
 
         {sessions.length === 0 ? (
           <div className="p-8 rounded-2xl bg-slate-900/40 border border-white/5 text-center text-white/40 text-xs">
-            {language === 'sk'
-              ? 'Zatiaľ nemáte zaznamenaný žiadny spánok. Ťuknite vyššie na "Dieťatko práve zaspalo".'
-              : 'No sleep sessions recorded yet. Tap "Baby just fell asleep" above.'}
+            {texts.noHistory}
           </div>
         ) : (
           <div className="flex flex-col gap-2">
             {sessions.map((s) => {
               const startDate = new Date(s.startTime);
               const endDate = new Date(s.endTime);
-              const dateStr = startDate.toLocaleDateString(language === 'sk' ? 'sk-SK' : undefined, {
+              const dateStr = startDate.toLocaleDateString(currentLocale, {
                 day: 'numeric',
                 month: 'short',
               });
-              const startStr = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-              const endStr = endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-              const qualityLabels = {
-                peaceful: language === 'sk' ? '🌿 Kľudný' : '🌿 Calm',
-                normal: language === 'sk' ? '😴 Normálny' : '😴 Normal',
-                restless: language === 'sk' ? '🌪️ Nepokojný' : '🌪️ Restless',
-              };
+              const startStr = startDate.toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' });
+              const endStr = endDate.toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' });
 
               return (
                 <div
@@ -928,7 +1489,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
                       <div className="flex items-center gap-2 text-[11px] text-white/50 mt-0.5">
                         <span>{dateStr}</span>
                         <span>·</span>
-                        <span>{qualityLabels[s.quality] || s.quality}</span>
+                        <span>{getQualityText(s.quality)}</span>
                         {s.notes && (
                           <>
                             <span>·</span>
@@ -942,7 +1503,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
                   <button
                     onClick={() => handleDeleteSession(s.id)}
                     className="p-2 rounded-xl text-white/30 hover:text-red-400 hover:bg-red-500/10 active:scale-95 transition-all shrink-0"
-                    title={language === 'sk' ? 'Vymazať' : 'Delete'}
+                    title={texts.deleteTitle}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -960,7 +1521,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Sun className="w-5 h-5 text-amber-400" />
-                <span>{language === 'sk' ? 'Uložiť prebudenie' : 'Save wake up'}</span>
+                <span>{texts.saveWakeUpModal}</span>
               </h3>
               <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-white/10 text-white font-bold">
                 {formatDuration(pendingEndSession.durationMin)}
@@ -971,7 +1532,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
               {/* Type */}
               <div>
                 <label className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">
-                  {language === 'sk' ? 'Typ spánku' : 'Sleep type'}
+                  {texts.qualityLabel}
                 </label>
                 <div className="flex gap-2">
                   <button
@@ -984,7 +1545,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
                     }`}
                   >
                     <Sun className="w-3.5 h-3.5" />
-                    <span>{language === 'sk' ? 'Denný spánok' : 'Day nap'}</span>
+                    <span>{texts.dayNap}</span>
                   </button>
 
                   <button
@@ -997,7 +1558,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
                     }`}
                   >
                     <Moon className="w-3.5 h-3.5" />
-                    <span>{language === 'sk' ? 'Nočný spánok' : 'Night sleep'}</span>
+                    <span>{texts.nightSleep}</span>
                   </button>
                 </div>
               </div>
@@ -1005,41 +1566,34 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
               {/* Quality */}
               <div>
                 <label className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">
-                  {language === 'sk' ? 'Ako dieťatko spalo?' : 'How was the sleep?'}
+                  {texts.howWasSleep}
                 </label>
                 <div className="grid grid-cols-3 gap-1.5 text-xs">
-                  {(['peaceful', 'normal', 'restless'] as SleepQuality[]).map((q) => {
-                    const labels = {
-                      peaceful: language === 'sk' ? '🌿 Kľudný' : '🌿 Calm',
-                      normal: language === 'sk' ? '😴 Normálny' : '😴 Normal',
-                      restless: language === 'sk' ? '🌪️ Nepokojný' : '🌪️ Restless',
-                    };
-                    return (
-                      <button
-                        key={q}
-                        type="button"
-                        onClick={() => setModalQuality(q)}
-                        className={`py-2 px-1 rounded-xl text-center border text-[11px] font-medium transition-colors ${
-                          modalQuality === q
-                            ? 'bg-white/20 border-white/40 text-white font-bold'
-                            : 'bg-white/5 border-white/10 text-white/60'
-                        }`}
-                      >
-                        {labels[q]}
-                      </button>
-                    );
-                  })}
+                  {(['peaceful', 'normal', 'restless'] as SleepQuality[]).map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => setModalQuality(q)}
+                      className={`py-2 px-1 rounded-xl text-center border text-[11px] font-medium transition-colors ${
+                        modalQuality === q
+                          ? 'bg-white/20 border-white/40 text-white font-bold'
+                          : 'bg-white/5 border-white/10 text-white/60'
+                      }`}
+                    >
+                      {getQualityText(q)}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               {/* Notes */}
               <div>
                 <label className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">
-                  {language === 'sk' ? 'Poznámka (voliteľné)' : 'Note (optional)'}
+                  {texts.notePlaceholder}
                 </label>
                 <input
                   type="text"
-                  placeholder={language === 'sk' ? 'Napr. bez nočného budenia' : 'e.g. slept peacefully'}
+                  placeholder={texts.noteModalPlaceholder}
                   value={modalNotes}
                   onChange={(e) => setModalNotes(e.target.value)}
                   maxLength={100}
@@ -1054,7 +1608,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
                 onClick={handleCancelLiveSession}
                 className="py-2.5 px-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white/70 font-semibold text-xs active:scale-95 transition-all"
               >
-                {language === 'sk' ? 'Zahodiť' : 'Discard'}
+                {texts.discard}
               </button>
 
               <button
@@ -1062,7 +1616,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
                 onClick={handleSaveLiveSession}
                 className="flex-1 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-950/40 active:scale-95 transition-all"
               >
-                {language === 'sk' ? 'Uložiť do histórie' : 'Save to history'}
+                {texts.saveToHistory}
               </button>
             </div>
           </div>

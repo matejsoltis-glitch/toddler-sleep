@@ -804,6 +804,11 @@ export const translations: Record<Language, Translations> = {
           },
         },
       },
+      schedule: {
+        tabTitle: '4. Asistent spánkového režimu',
+        tabSubtitle: 'Sledování bdělosti, spánku a historie',
+        activeBadge: 'Sleduje se',
+      },
     },
     timer: {
       title: 'Časovač vypnutí',
@@ -1027,6 +1032,11 @@ export const translations: Record<Language, Translations> = {
             rhythm: 'Łagodny rytm ~68 BPM',
           },
         },
+      },
+      schedule: {
+        tabTitle: '4. Asystent harmonogramu',
+        tabSubtitle: 'Śledzenie snu, czuwania i historia',
+        activeBadge: 'Śledzenie',
       },
     },
     timer: {
@@ -1252,6 +1262,11 @@ export const translations: Record<Language, Translations> = {
           },
         },
       },
+      schedule: {
+        tabTitle: '4. Alvási asszisztens',
+        tabSubtitle: 'Ébrenlét és alvás nyomon követése',
+        activeBadge: 'Követés',
+      },
     },
     timer: {
       title: 'Elalváskapcsoló',
@@ -1476,6 +1491,11 @@ export const translations: Record<Language, Translations> = {
           },
         },
       },
+      schedule: {
+        tabTitle: '4. Асистент режиму сну',
+        tabSubtitle: 'Відстеження сну, неспання та історія',
+        activeBadge: 'Відстежується',
+      },
     },
     timer: {
       title: 'Таймер сну',
@@ -1699,6 +1719,11 @@ export const translations: Record<Language, Translations> = {
             rhythm: 'Ritmo ovattato ~68 BPM',
           },
         },
+      },
+      schedule: {
+        tabTitle: '4. Assistente del sonno',
+        tabSubtitle: 'Monitoraggio sonno, veglia e cronologia',
+        activeBadge: 'In corso',
       },
     },
     timer: {
