@@ -41,6 +41,11 @@ jobs:
           npx @capacitor/assets generate --android || true
           npx cap sync android
 
+      - name: Nastavenie celej obrazovky (Immersive Fullscreen)
+        run: |
+          # Pridanie celoobrazovkoveho rezimu do Android stylu aplikacie
+          sed -i '/<\/style>/i \        <item name="android:windowFullscreen">true</item>\n        <item name="android:windowContentOverlay">@null</item>' android/app/src/main/res/values/styles.xml
+
       - name: Oprava duplicitných Kotlin závislostí
         run: |
           cat << 'EOF' >> android/app/build.gradle
