@@ -1,0 +1,8 @@
+{
+  "name": "Toddler sleep assistant",
+  "description": "Dotykový uspávací asistent pre bábätká a deti s upokojujúcim svetlom, bielym šumom v 3 intenzitách, zvukmi prírody, nočným režimom a postupným stlmením zvuku.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
