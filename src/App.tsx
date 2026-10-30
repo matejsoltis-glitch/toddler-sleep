@@ -666,7 +666,7 @@ export default function App() {
       >
         <div className="flex items-center gap-2">
           <span className="font-medium text-white/60">Toddler sleep assistant</span>
-          <span className="text-[11px] font-bold italic text-white/50">v0.87</span>
+          <span className="text-[11px] font-bold italic text-white/50">v0.90</span>
         </div>
         <span>Autor: Matej Šoltis</span>
       </footer>

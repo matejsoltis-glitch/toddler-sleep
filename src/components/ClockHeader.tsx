@@ -39,7 +39,7 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
   };
 
   return (
-    <header className="w-full border-b border-white/10 select-none bg-slate-950/70 backdrop-blur-md sticky top-0 z-30">
+    <header className="w-full border-b border-white/10 select-none bg-slate-950/70 backdrop-blur-md sticky top-0 z-30 pt-[8mm]">
       {/* Main Top Header without any distracting clock, day or date */}
       <div className="w-full max-w-md mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
         {/* Left side: Day/Night status or Back button, with remaining timer positioned cleanly underneath */}
