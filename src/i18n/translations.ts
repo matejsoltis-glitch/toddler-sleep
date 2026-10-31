@@ -53,6 +53,13 @@ export interface Translations {
       };
       palettesTitle: string;
       shadesCount: string;
+      changePalette: string;
+      activePaletteOnly: string;
+      customColorsTitle: string;
+      customColorsHint: string;
+      addColor: string;
+      removeColor: string;
+      pickColorOnWheel: string;
     };
     whiteNoise: {
       tabTitle: string;
@@ -200,6 +207,8 @@ export interface Translations {
     moonlight: { name: string; desc: string; mood: string };
     forestMoss: { name: string; desc: string; mood: string };
     redMelatonin: { name: string; desc: string; mood: string };
+    circadianScience: { name: string; desc: string; mood: string };
+    customSpectrum: { name: string; desc: string; mood: string };
   };
 }
 
@@ -260,6 +269,13 @@ export const translations: Record<Language, Translations> = {
         },
         palettesTitle: 'Select Soothing Color Spectrum',
         shadesCount: 'shades',
+        changePalette: 'Change Palette',
+        activePaletteOnly: 'Active Palette',
+        customColorsTitle: 'Custom Palette Colors',
+        customColorsHint: 'Choose 2 to 6 colors using the color wheel',
+        addColor: 'Add Color',
+        removeColor: 'Remove Color',
+        pickColorOnWheel: 'Touch or drag on wheel to pick color',
       },
       whiteNoise: {
         tabTitle: '2. White Noise',
@@ -431,6 +447,16 @@ export const translations: Record<Language, Translations> = {
         desc: 'Deep ruby bulb for night nursing and diaper changes without disrupting baby’s sleep cycle.',
         mood: 'Undisturbed sleep',
       },
+      circadianScience: {
+        name: 'Circadian Spectrum',
+        desc: 'Based on sleep laboratory research.',
+        mood: 'Science deep sleep',
+      },
+      customSpectrum: {
+        name: 'Custom Spectrum',
+        desc: 'Pick your own 2 to 6 calming colors using the interactive color wheel.',
+        mood: 'Personalized palette',
+      },
     },
   },
   sk: {
@@ -489,6 +515,13 @@ export const translations: Record<Language, Translations> = {
         },
         palettesTitle: 'Výber upokojujúceho spektra farieb',
         shadesCount: 'odtieňov',
+        changePalette: 'Zmeniť paletu',
+        activePaletteOnly: 'Aktívna paleta',
+        customColorsTitle: 'Vlastné farby spektra',
+        customColorsHint: 'Vyberte 2 až 6 ľubovoľných farieb pomocou farebného kolieska',
+        addColor: 'Pridať farbu',
+        removeColor: 'Odstrániť',
+        pickColorOnWheel: 'Dotknite sa alebo potiahnite po koliesku',
       },
       whiteNoise: {
         tabTitle: '2. Biely šum',
@@ -658,7 +691,17 @@ export const translations: Record<Language, Translations> = {
       redMelatonin: {
         name: 'Červené nočné svetlo (0% modrého svetla)',
         desc: 'Hlboká rubínová žiarovka pre nočné kŕmenie a prebaľovanie bez narušenia spánkového cyklu.',
-        mood: 'Nerušený spánek',
+        mood: 'Nerušený spánok',
+      },
+      circadianScience: {
+        name: 'Cirkadiálne spektrum',
+        desc: 'Na základe výskumu spánkových laboratórií.',
+        mood: 'Vedecký spánok',
+      },
+      customSpectrum: {
+        name: 'Ľubovoľné (vlastné)',
+        desc: 'Vlastný výber 2 až 6 upokojujúcich farieb pomocou interaktívneho farebného kolieska.',
+        mood: 'Vlastná paleta',
       },
     },
   },
@@ -718,6 +761,13 @@ export const translations: Record<Language, Translations> = {
         },
         palettesTitle: 'Výběr uklidňujícího spektra barev',
         shadesCount: 'odstínů',
+        changePalette: 'Změnit paletu',
+        activePaletteOnly: 'Aktivní paleta',
+        customColorsTitle: 'Vlastní barvy spektra',
+        customColorsHint: 'Vyberte 2 až 6 libovolných barev pomocí barevného kolečka',
+        addColor: 'Přidat barvu',
+        removeColor: 'Odebrat',
+        pickColorOnWheel: 'Klepněte nebo táhněte po kolečku',
       },
       whiteNoise: {
         tabTitle: '2. Bílý šum',
@@ -889,6 +939,16 @@ export const translations: Record<Language, Translations> = {
         desc: 'Hluboká rubínová žárovka pro noční krmení a přebalování bez narušení spánkového cyklu.',
         mood: 'Nerušený spánek',
       },
+      circadianScience: {
+        name: 'Cirkadiální spektrum',
+        desc: 'Na základě výzkumu spánkových laboratoří.',
+        mood: 'Vědecký spánek',
+      },
+      customSpectrum: {
+        name: 'Vlastní (volitelné)',
+        desc: 'Vlastní výběr 2 až 6 uklidňujících barev pomocí interaktivního barevného kolečka.',
+        mood: 'Vlastní paleta',
+      },
     },
   },
   pl: {
@@ -947,6 +1007,13 @@ export const translations: Record<Language, Translations> = {
         },
         palettesTitle: 'Wybór kojącego spektrum barw',
         shadesCount: 'odcieni',
+        changePalette: 'Zmień paletę',
+        activePaletteOnly: 'Aktywna paleta',
+        customColorsTitle: 'Własne kolory spektrum',
+        customColorsHint: 'Wybierz od 2 do 6 kolorów za pomocą koła barw',
+        addColor: 'Dodaj kolor',
+        removeColor: 'Usuń',
+        pickColorOnWheel: 'Dotknij lub przeciągnij po kole barw',
       },
       whiteNoise: {
         tabTitle: '2. Biały szum',
@@ -1118,6 +1185,16 @@ export const translations: Record<Language, Translations> = {
         desc: 'Głęboka rubinowa barwa do nocnego karmienia i przewijania bez rozbudzania.',
         mood: 'Nieprzerwany sen',
       },
+      circadianScience: {
+        name: 'Spektrum dobowe',
+        desc: 'Na podstawie badań laboratoriów snu.',
+        mood: 'Naukowo wspierany sen',
+      },
+      customSpectrum: {
+        name: 'Własne (dowolne)',
+        desc: 'Własny wybór 2 do 6 uspokajających kolorów za pomocą interaktywnego koła barw.',
+        mood: 'Własna paleta',
+      },
     },
   },
   hu: {
@@ -1176,6 +1253,13 @@ export const translations: Record<Language, Translations> = {
         },
         palettesTitle: 'Nyugtató színspektrum kiválasztása',
         shadesCount: 'árnyalat',
+        changePalette: 'Paletta váltása',
+        activePaletteOnly: 'Aktív paletta',
+        customColorsTitle: 'Egyéni színek',
+        customColorsHint: 'Válassz 2-6 nyugtató színt a színkerék segítségével',
+        addColor: 'Szín hozzáadása',
+        removeColor: 'Törlés',
+        pickColorOnWheel: 'Érintsd meg vagy húzd az ujjad a színkeréken',
       },
       whiteNoise: {
         tabTitle: '2. Fehér zaj',
@@ -1347,6 +1431,16 @@ export const translations: Record<Language, Translations> = {
         desc: 'Mély rubin fény az éjszakai etetéshez és pelenkázáshoz ébredés nélkül.',
         mood: 'Zavartalan alvás',
       },
+      circadianScience: {
+        name: 'Cirkadián spektrum',
+        desc: 'Alváslaboratóriumi kutatások alapján.',
+        mood: 'Tudományos alvás',
+      },
+      customSpectrum: {
+        name: 'Egyéni (szabadon választott)',
+        desc: '2-6 nyugtató szín egyéni kiválasztása az interaktív színkerékkel.',
+        mood: 'Egyéni paletta',
+      },
     },
   },
   uk: {
@@ -1405,6 +1499,13 @@ export const translations: Record<Language, Translations> = {
         },
         palettesTitle: 'Вибір заспокійливого спектра кольорів',
         shadesCount: 'відтінків',
+        changePalette: 'Змінити палітру',
+        activePaletteOnly: 'Активна палітра',
+        customColorsTitle: 'Власні кольори спектру',
+        customColorsHint: 'Оберіть від 2 до 6 кольорів за допомогою колірного кола',
+        addColor: 'Додати колір',
+        removeColor: 'Видалити',
+        pickColorOnWheel: 'Торкніться або проведіть по колу кольорів',
       },
       whiteNoise: {
         tabTitle: '2. Білий шум',
@@ -1576,6 +1677,16 @@ export const translations: Record<Language, Translations> = {
         desc: 'Глибоке рубінове світло для нічного годування та сповивання без порушення сну.',
         mood: 'Непорушний сон',
       },
+      circadianScience: {
+        name: 'Циркадний спектр',
+        desc: 'На основі досліджень лабораторій сну.',
+        mood: 'Науковий сон',
+      },
+      customSpectrum: {
+        name: 'Власне (довільне)',
+        desc: 'Власний вибір від 2 до 6 заспокійливих кольорів за допомогою інтерактивного колірного кола.',
+        mood: 'Власна палітра',
+      },
     },
   },
   it: {
@@ -1634,6 +1745,13 @@ export const translations: Record<Language, Translations> = {
         },
         palettesTitle: 'Seleziona lo spettro di colori rilassanti',
         shadesCount: 'sfumature',
+        changePalette: 'Cambia tavolozza',
+        activePaletteOnly: 'Tavolozza attiva',
+        customColorsTitle: 'Colori personalizzati',
+        customColorsHint: 'Scegli da 2 a 6 colori rilassanti con la ruota dei colori',
+        addColor: 'Aggiungi colore',
+        removeColor: 'Rimuovi',
+        pickColorOnWheel: 'Tocca o trascina sulla ruota dei colori',
       },
       whiteNoise: {
         tabTitle: '2. Rumore bianco',
@@ -1804,6 +1922,16 @@ export const translations: Record<Language, Translations> = {
         name: 'Luce notturna rossa (0% luce blu)',
         desc: "Luce rubino profonda per l'allattamento e il cambio notturno senza disturbare il sonno.",
         mood: 'Sonno imperturbato',
+      },
+      circadianScience: {
+        name: 'Spettro circadiano',
+        desc: 'Basato sulla ricerca dei laboratori del sonno.',
+        mood: 'Sonno scientifico',
+      },
+      customSpectrum: {
+        name: 'Personalizzato (a scelta)',
+        desc: 'Selezione personale da 2 a 6 colori rilassanti tramite la ruota dei colori interattiva.',
+        mood: 'Tavolozza personalizzata',
       },
     },
   },

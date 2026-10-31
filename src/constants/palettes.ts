@@ -46,7 +46,47 @@ export const getPalettes = (lang: Language): LightPalette[] => {
       mood: t.redMelatonin.mood,
       colors: ['#dc2626', '#b91c1c', '#991b1b', '#ef4444', '#7f1d1d'],
     },
+    {
+      id: 'circadian-science',
+      name: t.circadianScience.name,
+      description: t.circadianScience.desc,
+      mood: t.circadianScience.mood,
+      // Harvard & Salk research: >620nm wavelengths (deep amber, ruby, sunset ember) 0% melanopsin stimulation
+      colors: ['#991b1b', '#7f1d1d', '#b91c1c', '#c2410c', '#9a3412', '#78350f'],
+    },
+    {
+      id: 'custom-spectrum',
+      name: t.customSpectrum.name,
+      description: t.customSpectrum.desc,
+      mood: t.customSpectrum.mood,
+      colors: loadCustomPaletteColors(),
+    },
   ];
+};
+
+export const loadCustomPaletteColors = (): string[] => {
+  try {
+    const saved = localStorage.getItem('toddler_custom_light_palette');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length >= 2 && parsed.length <= 6) {
+        return parsed;
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return ['#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
+};
+
+export const saveCustomPaletteColors = (colors: string[]): void => {
+  try {
+    if (Array.isArray(colors) && colors.length >= 2 && colors.length <= 6) {
+      localStorage.setItem('toddler_custom_light_palette', JSON.stringify(colors));
+    }
+  } catch {
+    // ignore
+  }
 };
 
 export const LIGHT_PALETTES = getPalettes('sk');

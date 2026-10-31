@@ -27,6 +27,16 @@ export const FullScreenLamp: React.FC<FullScreenLampProps> = ({
   isSoundPlaying,
 }) => {
   const [colorIndex, setColorIndex] = useState(0);
+  const [activeLayer, setActiveLayer] = useState<'A' | 'B'>('A');
+  const [layerAColors, setLayerAColors] = useState<{ c1: string; c2: string }>(() => ({
+    c1: redFilter ? '#b91c1c' : palette.colors[0] || '#f97316',
+    c2: redFilter ? '#991b1b' : palette.colors[1 % palette.colors.length] || '#ea580c',
+  }));
+  const [layerBColors, setLayerBColors] = useState<{ c1: string; c2: string }>(() => ({
+    c1: redFilter ? '#b91c1c' : palette.colors[1 % palette.colors.length] || '#ea580c',
+    c2: redFilter ? '#991b1b' : palette.colors[2 % palette.colors.length] || '#fb923c',
+  }));
+
   const [showControls, setShowControls] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [lockBadgeVisible, setLockBadgeVisible] = useState(false);
@@ -46,12 +56,29 @@ export const FullScreenLamp: React.FC<FullScreenLampProps> = ({
     breathing: 6000,
   };
 
+  const fadeDuration = Math.round(speedDurations[speed] * 0.95);
+
   useEffect(() => {
     const interval = setInterval(() => {
-      setColorIndex((prev) => (prev + 1) % palette.colors.length);
+      setColorIndex((prev) => {
+        const nextIdx = (prev + 1) % palette.colors.length;
+        const c1 = redFilter ? '#b91c1c' : palette.colors[nextIdx];
+        const c2 = redFilter ? '#991b1b' : palette.colors[(nextIdx + 1) % palette.colors.length];
+
+        setActiveLayer((cur) => {
+          if (cur === 'A') {
+            setLayerBColors({ c1, c2 });
+            return 'B';
+          } else {
+            setLayerAColors({ c1, c2 });
+            return 'A';
+          }
+        });
+        return nextIdx;
+      });
     }, speedDurations[speed]);
     return () => clearInterval(interval);
-  }, [palette, speed]);
+  }, [palette, speed, redFilter]);
 
   // Handle 5-second auto-fadeout of the lock notification
   useEffect(() => {
@@ -212,13 +239,28 @@ export const FullScreenLamp: React.FC<FullScreenLampProps> = ({
       onPointerLeave={handlePointerUpOrCancel}
       className="fixed inset-0 z-50 bg-[#030712] flex flex-col justify-between p-6 select-none cursor-pointer overflow-hidden touch-none"
     >
-      {/* Dedicated ambient glowing light layer */}
+      {/* Dual cross-fade layers for 100% fluid, continuous, soft transition */}
+      {/* Layer A */}
       <div
-        className={`absolute inset-0 pointer-events-none transition-colors duration-[4000ms] ease-in-out ${
+        className={`absolute inset-0 pointer-events-none transition-opacity ease-in-out ${
           speed === 'breathing' ? 'animate-rhythmic-breathing' : ''
         }`}
         style={{
-          background: `radial-gradient(circle at 50% 45%, ${currentColor} 0%, ${nextColor} 65%, #030712 100%)`,
+          background: `radial-gradient(circle at 50% 45%, ${layerAColors.c1} 0%, ${layerAColors.c2} 65%, #030712 100%)`,
+          opacity: activeLayer === 'A' ? 1 : 0,
+          transitionDuration: `${fadeDuration}ms`,
+          filter: `brightness(${brightness / 100})`,
+        }}
+      />
+      {/* Layer B */}
+      <div
+        className={`absolute inset-0 pointer-events-none transition-opacity ease-in-out ${
+          speed === 'breathing' ? 'animate-rhythmic-breathing' : ''
+        }`}
+        style={{
+          background: `radial-gradient(circle at 50% 45%, ${layerBColors.c1} 0%, ${layerBColors.c2} 65%, #030712 100%)`,
+          opacity: activeLayer === 'B' ? 1 : 0,
+          transitionDuration: `${fadeDuration}ms`,
           filter: `brightness(${brightness / 100})`,
         }}
       />

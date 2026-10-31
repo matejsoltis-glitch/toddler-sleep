@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Moon } from 'lucide-react';
 import { ClockHeader } from './components/ClockHeader';
 import { MainMenu } from './components/MainMenu';
 import { CalmLightMode } from './components/CalmLightMode';
@@ -67,7 +68,13 @@ export default function App() {
     const newPalettes = getPalettes(lang);
     setSelectedPalette((prev) => {
       const found = newPalettes.find((p) => p.id === prev.id);
-      return found || newPalettes[0];
+      if (found) {
+        if (prev.id === 'custom-spectrum') {
+          return { ...found, colors: prev.colors };
+        }
+        return found;
+      }
+      return newPalettes[0];
     });
   };
 
@@ -79,9 +86,63 @@ export default function App() {
   // Navigation: Starts at 'menu' (Modes only start working after user taps them from main menu)
   const [activeMode, setActiveMode] = useState<AppMode>('menu');
 
+  // Components Opacity state (5% to 100%, safely initialized and validated)
+  const [componentsOpacity, setComponentsOpacity] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('toddler_components_opacity');
+      if (saved !== null && saved !== '' && saved !== 'NaN') {
+        const num = Number(saved);
+        if (Number.isFinite(num) && !isNaN(num)) {
+          return Math.max(5, Math.min(100, Math.round(num)));
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return 100;
+  });
+
+  const handleUpdateComponentsOpacity = (val: number) => {
+    const num = Number(val);
+    const safeVal = Number.isFinite(num) && !isNaN(num)
+      ? Math.max(5, Math.min(100, Math.round(num)))
+      : 100;
+    setComponentsOpacity(safeVal);
+    try {
+      localStorage.setItem('toddler_components_opacity', safeVal.toString());
+    } catch {
+      // ignore
+    }
+  };
+
+  // Full Screen Sleep Dimming after timer completion (dim completely to minimum until screen is touched)
+  const [isSleepDimmed, setIsSleepDimmed] = useState<boolean>(false);
+
   // Mode 1: Calm Light State
   const [isLightOn, setIsLightOn] = useState<boolean>(false);
-  const [selectedPalette, setSelectedPalette] = useState<LightPalette>(() => getPalettes(language)[0]);
+  const [selectedPalette, setSelectedPalette] = useState<LightPalette>(() => {
+    try {
+      const savedPaletteId = localStorage.getItem('toddler_active_palette_id');
+      const all = getPalettes(language);
+      if (savedPaletteId) {
+        const found = all.find((p) => p.id === savedPaletteId);
+        if (found) return found;
+      }
+    } catch {
+      // ignore
+    }
+    return getPalettes(language)[0];
+  });
+
+  const handleSelectPalette = (palette: LightPalette) => {
+    setSelectedPalette(palette);
+    try {
+      localStorage.setItem('toddler_active_palette_id', palette.id);
+    } catch {
+      // ignore
+    }
+  };
+
   const [lightSpeed, setLightSpeed] = useState<LightSpeed>('slow');
   const [brightness, setBrightness] = useState<number>(80);
   const [isFullScreenLamp, setIsFullScreenLamp] = useState<boolean>(false);
@@ -358,6 +419,7 @@ export default function App() {
             setIsTimerRunning(false);
             setFadeMultiplier(1.0);
             soundEngine.setFadeMultiplier(1.0);
+            setIsSleepDimmed(true); // Stlmiť jas úplne na minimum po skončení časovača
             return 0;
           }
 
@@ -420,6 +482,31 @@ export default function App() {
     soundEngine.setFadeMultiplier(1.0);
   };
 
+  const handleSubtractMinutes = (mins: number) => {
+    setRemainingSeconds((prev) => {
+      const next = Math.max(0, prev - mins * 60);
+      if (next === 0) {
+        setIsTimerRunning(false);
+      }
+      return next;
+    });
+    setDurationMinutes((prev) => Math.max(0, prev - mins));
+    setFadeMultiplier(1.0);
+    soundEngine.setFadeMultiplier(1.0);
+  };
+
+  const handleSeekSeconds = (sec: number) => {
+    const clamped = Math.max(0, sec);
+    const mins = Math.ceil(clamped / 60);
+    setRemainingSeconds(clamped);
+    if (mins > durationMinutes || durationMinutes === 0) {
+      setDurationMinutes(mins);
+    }
+    setIsTimerRunning(clamped > 0);
+    setFadeMultiplier(1.0);
+    soundEngine.setFadeMultiplier(1.0);
+  };
+
   const handleResetTimer = () => {
     if (durationMinutes > 0) {
       setRemainingSeconds(durationMinutes * 60);
@@ -442,6 +529,10 @@ export default function App() {
     ? 'nature'
     : 'none';
   const isSoundPlaying = soundPlayingType !== 'none';
+  const safeOpacityRatio =
+    Number.isFinite(componentsOpacity) && componentsOpacity >= 5
+      ? Math.max(0.12, componentsOpacity / 100)
+      : 1;
 
   return (
     <div
@@ -460,28 +551,37 @@ export default function App() {
         }`}
         aria-hidden="true"
       >
-        {/* Soft upper ambient glow with active color */}
+        {/* Soft upper ambient glow with active color (maskImage with real backgroundColor enables continuous smooth color interpolation) */}
         <div
-          className={`absolute inset-0 transition-colors duration-[2500ms] ease-in-out ${
+          className={`absolute inset-0 transition-colors ease-in-out ${
             lightSpeed === 'breathing' ? 'animate-rhythmic-breathing' : ''
           }`}
           style={{
-            background: `radial-gradient(circle at 50% 28%, ${activeLightColor}55 0%, ${activeLightColor}22 50%, transparent 80%)`,
+            backgroundColor: activeLightColor,
+            opacity: 0.32,
+            maskImage: 'radial-gradient(circle at 50% 28%, black 0%, black 35%, transparent 80%)',
+            WebkitMaskImage: 'radial-gradient(circle at 50% 28%, black 0%, black 35%, transparent 80%)',
+            transitionDuration: `${Math.round(speedDurations[lightSpeed] * 0.92)}ms`,
           }}
         />
         {/* Soft lower ambient glow with secondary palette color */}
         <div
-          className="absolute inset-0 transition-colors duration-[3000ms] ease-in-out"
+          className="absolute inset-0 transition-colors ease-in-out"
           style={{
-            background: `radial-gradient(circle at 50% 85%, ${nextLightColor}35 0%, transparent 65%)`,
+            backgroundColor: nextLightColor,
+            opacity: 0.22,
+            maskImage: 'radial-gradient(circle at 50% 85%, black 0%, transparent 70%)',
+            WebkitMaskImage: 'radial-gradient(circle at 50% 85%, black 0%, transparent 70%)',
+            transitionDuration: `${Math.round(speedDurations[lightSpeed] * 0.92)}ms`,
           }}
         />
         {/* Ambient screen wash scaled with brightness */}
         <div
-          className="absolute inset-0 transition-colors duration-[2500ms] ease-in-out mix-blend-screen"
+          className="absolute inset-0 transition-colors ease-in-out mix-blend-screen"
           style={{
             backgroundColor: activeLightColor,
             opacity: (brightness / 100) * 0.16,
+            transitionDuration: `${Math.round(speedDurations[lightSpeed] * 0.92)}ms`,
           }}
         />
       </div>
@@ -510,6 +610,39 @@ export default function App() {
           style={{ opacity: nightMode.screenDimPercent / 100 }}
           aria-hidden="true"
         />
+      )}
+
+      {/* Dimmed to minimum after sleep timer ends - dismissed upon screen touch */}
+      {isSleepDimmed && (
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Tap to restore screen"
+          onPointerDown={() => {
+            triggerHaptic(15);
+            setIsSleepDimmed(false);
+          }}
+          className="fixed inset-0 z-50 bg-black/98 cursor-pointer flex flex-col items-center justify-center select-none animate-fade-in"
+        >
+          <div className="flex flex-col items-center gap-3 text-white/25 hover:text-white/40 transition-colors pointer-events-none">
+            <Moon className="w-8 h-8 opacity-30 animate-pulse" />
+            <span className="text-[11px] tracking-widest uppercase font-medium">
+              {language === 'sk'
+                ? 'Dotknite sa pre rozsvietenie'
+                : language === 'cs'
+                ? 'Klepnutím rozsvítíte'
+                : language === 'pl'
+                ? 'Dotknij, aby rozjaśnić'
+                : language === 'hu'
+                ? 'Érintse meg a feloldáshoz'
+                : language === 'uk'
+                ? 'Торкніться для підсвітки'
+                : language === 'it'
+                ? 'Tocca per riattivare'
+                : 'Tap screen to wake'}
+            </span>
+          </div>
+        </div>
       )}
 
       {/* Child Lock Fullscreen Interceptor */}
@@ -552,37 +685,40 @@ export default function App() {
       />
 
       {/* Permanent Header with app title, back button, lock, and settings gear */}
-      <ClockHeader
-        language={language}
-        activeMode={activeMode}
-        onBackToMenu={() => {
-          triggerHaptic(12);
-          setActiveMode('menu');
-        }}
-        nightMode={nightMode}
-        onToggleNightMode={() =>
-          handleUpdateNightMode({ forceDark: !nightMode.forceDark })
-        }
-        onToggleRedFilter={() =>
-          handleUpdateNightMode({ redFilter: !nightMode.redFilter })
-        }
-        isTouchLocked={isTouchLocked}
-        onToggleTouchLock={() => {
-          triggerHaptic(14);
-          setIsTouchLocked(!isTouchLocked);
-        }}
-        activeSoundMode={soundPlayingType}
-        isPlaying={isSoundPlaying}
-        timerRemaining={durationMinutes > 0 ? remainingSeconds : null}
-        onOpenSettings={() => {
-          triggerHaptic(10);
-          setIsSettingsOpen(true);
-        }}
-      />
+      <div style={{ opacity: safeOpacityRatio }} className="w-full transition-opacity duration-150">
+        <ClockHeader
+          language={language}
+          activeMode={activeMode}
+          onBackToMenu={() => {
+            triggerHaptic(12);
+            setActiveMode('menu');
+          }}
+          nightMode={nightMode}
+          onToggleNightMode={() =>
+            handleUpdateNightMode({ forceDark: !nightMode.forceDark })
+          }
+          onToggleRedFilter={() =>
+            handleUpdateNightMode({ redFilter: !nightMode.redFilter })
+          }
+          isTouchLocked={isTouchLocked}
+          onToggleTouchLock={() => {
+            triggerHaptic(14);
+            setIsTouchLocked(!isTouchLocked);
+          }}
+          activeSoundMode={soundPlayingType}
+          isPlaying={isSoundPlaying}
+          timerRemaining={durationMinutes > 0 ? remainingSeconds : null}
+          onOpenSettings={() => {
+            triggerHaptic(10);
+            setIsSettingsOpen(true);
+          }}
+        />
+      </div>
 
       {/* Mobile-tailored Main Container */}
       <main
-        className={`flex-1 w-full max-w-md mx-auto px-4 py-4 flex flex-col gap-4 ${
+        style={{ opacity: safeOpacityRatio }}
+        className={`flex-1 w-full max-w-md mx-auto px-4 py-4 flex flex-col gap-4 transition-opacity duration-150 ${
           isFullScreenLamp ? 'invisible pointer-events-none' : ''
         }`}
       >
@@ -604,6 +740,8 @@ export default function App() {
               onChangeVolume={handleVolumeChange}
               brightness={brightness}
               onChangeBrightness={setBrightness}
+              componentsOpacity={componentsOpacity}
+              onChangeComponentsOpacity={handleUpdateComponentsOpacity}
             />
           )}
 
@@ -620,7 +758,7 @@ export default function App() {
                 }
               }}
               selectedPalette={selectedPalette}
-              onSelectPalette={setSelectedPalette}
+              onSelectPalette={handleSelectPalette}
               speed={lightSpeed}
               onSelectSpeed={setLightSpeed}
               brightness={brightness}
@@ -676,6 +814,8 @@ export default function App() {
             onSetDuration={handleSetTimerDuration}
             onResetTimer={handleResetTimer}
             onAddMinutes={handleAddMinutes}
+            onSubtractMinutes={handleSubtractMinutes}
+            onSeekSeconds={handleSeekSeconds}
             isFadeEnabled={isFadeEnabled}
             onToggleFade={() => setIsFadeEnabled(!isFadeEnabled)}
             fadeMinutes={fadeMinutes}
@@ -687,13 +827,14 @@ export default function App() {
 
       {/* Subtle Mobile Bottom Status with Version & Author */}
       <footer
-        className={`w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between text-[11px] text-white/40 border-t border-white/5 select-none ${
+        style={{ opacity: safeOpacityRatio }}
+        className={`w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between text-[11px] text-white/40 border-t border-white/5 select-none transition-opacity duration-150 ${
           isFullScreenLamp ? 'invisible pointer-events-none' : ''
         }`}
       >
         <div className="flex items-center gap-2">
           <span className="font-medium text-white/60">Toddler sleep assistant</span>
-          <span className="text-[11px] font-bold italic text-white/50">v0.92</span>
+          <span className="text-[11px] font-bold italic text-white/50">v0.9.96</span>
         </div>
         <span>Autor: Matej Šoltis</span>
       </footer>

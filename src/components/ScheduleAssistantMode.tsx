@@ -1,19 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  Calendar,
+  Calendar as CalendarIcon,
   Clock,
   Moon,
   Sun,
   Plus,
   Trash2,
-  Share2,
-  FileSpreadsheet,
-  Copy,
-  Check,
   ChevronDown,
   Sparkles,
-  Info,
   TrendingUp,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  X,
 } from 'lucide-react';
 import { Language, SleepSession, SleepQuality, SleepType } from '../types';
 import { triggerHaptic } from '../utils/haptics';
@@ -97,6 +96,24 @@ interface ScheduleTexts {
     napsCount: string;
     recentRecords: string;
   };
+  // New calendar & history keys
+  calendarTitle: string;
+  allDays: string;
+  today: string;
+  yesterday: string;
+  pickDate: string;
+  noSessionsForDate: string;
+  showAllDaysBtn: string;
+  showMoreSessions: string;
+  showLessSessions: string;
+  scrollHint: string;
+  dayTotalLabel: string;
+  calendarModalTitle: string;
+  calendarAllDaysBtn: string;
+  calendarTodayBtn: string;
+  calendarCloseBtn: string;
+  monthNames: string[];
+  weekDaysShort: string[];
 }
 
 const scheduleTexts: Record<Language, ScheduleTexts> = {
@@ -169,6 +186,26 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
       napsCount: 'spánkov',
       recentRecords: 'Posledné záznamy:',
     },
+    calendarTitle: 'Prepínanie histórie podľa dní',
+    allDays: 'Všetky dni',
+    today: 'Dnes',
+    yesterday: 'Včera',
+    pickDate: 'Vybrať dátum',
+    noSessionsForDate: 'Pre vybraný deň nie sú zaznamenané žiadne spánky.',
+    showAllDaysBtn: 'Zobraziť všetky dni',
+    showMoreSessions: 'Zobraziť ďalšie spánky',
+    showLessSessions: 'Zobraziť menej',
+    scrollHint: 'Potiahnutím prstom rolujte staršie spánky',
+    dayTotalLabel: 'V tento deň:',
+    calendarModalTitle: 'Vybrať deň z kalendára',
+    calendarAllDaysBtn: 'Všetky dni',
+    calendarTodayBtn: 'Dnes',
+    calendarCloseBtn: 'Zavrieť',
+    monthNames: [
+      'Január', 'Február', 'Marec', 'Apríl', 'Máj', 'Jún',
+      'Júl', 'August', 'September', 'Október', 'November', 'December',
+    ],
+    weekDaysShort: ['Po', 'Ut', 'St', 'Št', 'Pi', 'So', 'Ne'],
   },
   cs: {
     currentStatus: 'Aktuální stav',
@@ -239,6 +276,26 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
       napsCount: 'spánků',
       recentRecords: 'Poslední záznamy:',
     },
+    calendarTitle: 'Přepínání historie podle dnů',
+    allDays: 'Všechny dny',
+    today: 'Dnes',
+    yesterday: 'Včera',
+    pickDate: 'Vybrat datum',
+    noSessionsForDate: 'Pro vybraný den nejsou zaznamenány žádné spánky.',
+    showAllDaysBtn: 'Zobrazit všechny dny',
+    showMoreSessions: 'Zobrazit další spánky',
+    showLessSessions: 'Zobrazit méně',
+    scrollHint: 'Potažením prstem rolujte starší spánky',
+    dayTotalLabel: 'V tento den:',
+    calendarModalTitle: 'Vybrat den z kalendáře',
+    calendarAllDaysBtn: 'Všechny dny',
+    calendarTodayBtn: 'Dnes',
+    calendarCloseBtn: 'Zavřít',
+    monthNames: [
+      'Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen',
+      'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec',
+    ],
+    weekDaysShort: ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'],
   },
   en: {
     currentStatus: 'Current Status',
@@ -309,6 +366,26 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
       napsCount: 'naps',
       recentRecords: 'Recent records:',
     },
+    calendarTitle: 'Switch history by days',
+    allDays: 'All days',
+    today: 'Today',
+    yesterday: 'Yesterday',
+    pickDate: 'Pick date',
+    noSessionsForDate: 'No sleep sessions recorded for this day.',
+    showAllDaysBtn: 'Show all days',
+    showMoreSessions: 'Show more sessions',
+    showLessSessions: 'Show less',
+    scrollHint: 'Scroll down with finger for older sessions',
+    dayTotalLabel: 'On this day:',
+    calendarModalTitle: 'Select Day from Calendar',
+    calendarAllDaysBtn: 'All days',
+    calendarTodayBtn: 'Today',
+    calendarCloseBtn: 'Close',
+    monthNames: [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ],
+    weekDaysShort: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
   },
   pl: {
     currentStatus: 'Aktualny stan',
@@ -379,6 +456,26 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
       napsCount: 'drzemek',
       recentRecords: 'Ostatnie wpisy:',
     },
+    calendarTitle: 'Przełączanie historii według dni',
+    allDays: 'Wszystkie dni',
+    today: 'Dzisiaj',
+    yesterday: 'Wczoraj',
+    pickDate: 'Wybierz datę',
+    noSessionsForDate: 'Brak zapisanych snów dla tego dnia.',
+    showAllDaysBtn: 'Pokaż wszystkie dni',
+    showMoreSessions: 'Pokaż więcej snów',
+    showLessSessions: 'Pokaż mniej',
+    scrollHint: 'Przesuń palcem, aby zobaczyć starsze sny',
+    dayTotalLabel: 'W ten dzień:',
+    calendarModalTitle: 'Wybierz dzień z kalendarza',
+    calendarAllDaysBtn: 'Wszystkie dni',
+    calendarTodayBtn: 'Dzisiaj',
+    calendarCloseBtn: 'Zamknij',
+    monthNames: [
+      'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+      'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień',
+    ],
+    weekDaysShort: ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'],
   },
   hu: {
     currentStatus: 'Jelenlegi állapot',
@@ -449,6 +546,26 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
       napsCount: 'alvás',
       recentRecords: 'Legutóbbi bejegyzések:',
     },
+    calendarTitle: 'Történet váltása napok szerint',
+    allDays: 'Minden nap',
+    today: 'Ma',
+    yesterday: 'Tegnap',
+    pickDate: 'Dátum választása',
+    noSessionsForDate: 'Ehhez a naphoz nincs rögzített alvás.',
+    showAllDaysBtn: 'Minden nap megjelenítése',
+    showMoreSessions: 'További alvások',
+    showLessSessions: 'Kevesebb',
+    scrollHint: 'Görgessen az ujjával a régebbi alvásokhoz',
+    dayTotalLabel: 'Ezen a napon:',
+    calendarModalTitle: 'Válasszon napot a naptárból',
+    calendarAllDaysBtn: 'Minden nap',
+    calendarTodayBtn: 'Ma',
+    calendarCloseBtn: 'Bezárás',
+    monthNames: [
+      'Január', 'Február', 'Március', 'Április', 'Május', 'Június',
+      'Július', 'Augusztus', 'Szeptember', 'Október', 'November', 'December',
+    ],
+    weekDaysShort: ['Hé', 'Ke', 'Sze', 'Csü', 'Pén', 'Szo', 'Vas'],
   },
   uk: {
     currentStatus: 'Поточний стан',
@@ -519,6 +636,26 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
       napsCount: 'снів',
       recentRecords: 'Останні записи:',
     },
+    calendarTitle: 'Перемикання історії за днями',
+    allDays: 'Всі дні',
+    today: 'Сьогодні',
+    yesterday: 'Вчора',
+    pickDate: 'Обрати дату',
+    noSessionsForDate: 'Для обраного дня немає записів сну.',
+    showAllDaysBtn: 'Показати всі дні',
+    showMoreSessions: 'Показати більше снів',
+    showLessSessions: 'Показати менше',
+    scrollHint: 'Прокрутіть пальцем для старіших снів',
+    dayTotalLabel: 'У цей день:',
+    calendarModalTitle: 'Обрати день у календарі',
+    calendarAllDaysBtn: 'Всі дні',
+    calendarTodayBtn: 'Сьогодні',
+    calendarCloseBtn: 'Закрити',
+    monthNames: [
+      'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
+      'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень',
+    ],
+    weekDaysShort: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'],
   },
   it: {
     currentStatus: 'Stato attuale',
@@ -589,6 +726,26 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
       napsCount: 'sonni',
       recentRecords: 'Registrazioni recenti:',
     },
+    calendarTitle: 'Cambia cronologia per giorno',
+    allDays: 'Tutti i giorni',
+    today: 'Oggi',
+    yesterday: 'Ieri',
+    pickDate: 'Scegli data',
+    noSessionsForDate: 'Nessun sonno registrato per questo giorno.',
+    showAllDaysBtn: 'Mostra tutti i giorni',
+    showMoreSessions: 'Mostra altri sonni',
+    showLessSessions: 'Mostra meno',
+    scrollHint: 'Scorri con il dito per i sonni precedenti',
+    dayTotalLabel: 'In questo giorno:',
+    calendarModalTitle: 'Seleziona giorno dal calendario',
+    calendarAllDaysBtn: 'Tutti i giorni',
+    calendarTodayBtn: 'Oggi',
+    calendarCloseBtn: 'Chiudi',
+    monthNames: [
+      'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+      'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
+    ],
+    weekDaysShort: ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'],
   },
 };
 
@@ -605,6 +762,74 @@ const dateLocales: Record<Language, string> = {
 export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ language }) => {
   const texts = scheduleTexts[language] || scheduleTexts.en;
   const currentLocale = dateLocales[language] || 'en-US';
+
+  const todayDateStr = new Date().toISOString().split('T')[0];
+  const yesterdayDate = new Date(Date.now() - 24 * 3600 * 1000);
+  const yesterdayDateStr = yesterdayDate.toISOString().split('T')[0];
+
+  // Selected date filter (null = 'all' days, or specific ISO string 'YYYY-MM-DD')
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null);
+
+  // History expanded state: default false (shows max 6), expands to 10 + touch scrolling
+  const [isHistoryExpanded, setIsHistoryExpanded] = useState<boolean>(false);
+
+  // Interactive Month Calendar Modal state
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState<boolean>(false);
+  const [calendarViewingYear, setCalendarViewingYear] = useState<number>(() => new Date().getFullYear());
+  const [calendarViewingMonth, setCalendarViewingMonth] = useState<number>(() => new Date().getMonth());
+
+  const handleOpenCalendarModal = () => {
+    triggerHaptic('light');
+    if (selectedDateFilter) {
+      const parts = selectedDateFilter.split('-');
+      if (parts.length === 3) {
+        setCalendarViewingYear(parseInt(parts[0], 10));
+        setCalendarViewingMonth(parseInt(parts[1], 10) - 1);
+      }
+    } else {
+      const now = new Date();
+      setCalendarViewingYear(now.getFullYear());
+      setCalendarViewingMonth(now.getMonth());
+    }
+    setIsCalendarModalOpen(true);
+  };
+
+  const handlePrevMonth = () => {
+    triggerHaptic('light');
+    setCalendarViewingMonth((prev) => {
+      if (prev === 0) {
+        setCalendarViewingYear((y) => y - 1);
+        return 11;
+      }
+      return prev - 1;
+    });
+  };
+
+  const handleNextMonth = () => {
+    triggerHaptic('light');
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    if (
+      calendarViewingYear > currentYear ||
+      (calendarViewingYear === currentYear && calendarViewingMonth >= currentMonth)
+    ) {
+      return;
+    }
+    setCalendarViewingMonth((prev) => {
+      if (prev === 11) {
+        setCalendarViewingYear((y) => y + 1);
+        return 0;
+      }
+      return prev + 1;
+    });
+  };
+
+  const handleSelectDay = (dayStr: string) => {
+    triggerHaptic('medium');
+    setSelectedDateFilter(dayStr);
+    setIsCalendarModalOpen(false);
+  };
 
   // Load sessions from localStorage or seed initial sample
   const [sessions, setSessions] = useState<SleepSession[]>(() => {
@@ -658,9 +883,6 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
 
   // Manual entry form expand state
   const [showManualForm, setShowManualForm] = useState(false);
-
-  // Export card collapsible state (collapsed by default to description)
-  const [isExportExpanded, setIsExportExpanded] = useState(false);
 
   // Quick finish modal state when waking up from live timer
   const [wakeModalOpen, setWakeModalOpen] = useState(false);
@@ -890,7 +1112,6 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
   const wakeWindowMins = calculateWakeWindowMinutes();
 
   // Calculate today's total sleep & breakdown
-  const todayDateStr = new Date().toISOString().split('T')[0];
   const todaySessions = sessions.filter((s) => s.startTime.startsWith(todayDateStr));
   const todayTotalMins = todaySessions.reduce((acc, curr) => acc + curr.durationMinutes, 0);
   const todayNapSessions = todaySessions.filter((s) => s.type === 'day-nap');
@@ -899,8 +1120,66 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
   const todayNightMins = todayNightSessions.reduce((acc, curr) => acc + curr.durationMinutes, 0);
   const todayAvgMins = todaySessions.length > 0 ? Math.round(todayTotalMins / todaySessions.length) : 0;
 
-  // Generate CSV formatted content with UTF-8 BOM
-  const generateCSVContent = () => {
+  // Calendar Day Navigation helpers
+  const handleShiftDay = (daysDelta: number) => {
+    triggerHaptic('light');
+    const baseDate = selectedDateFilter ? new Date(selectedDateFilter) : new Date();
+    const nextDate = new Date(baseDate.getTime() + daysDelta * 24 * 3600 * 1000);
+    const nextDateStr = nextDate.toISOString().split('T')[0];
+
+    // Don't step into future
+    if (nextDateStr > todayDateStr) {
+      setSelectedDateFilter(todayDateStr);
+    } else {
+      setSelectedDateFilter(nextDateStr);
+    }
+  };
+
+  // Format date display for calendar header (e.g. "Dnes (31. okt)")
+  const formatCalendarDateLabel = (dateStr: string | null) => {
+    if (!dateStr) return texts.allDays;
+    if (dateStr === todayDateStr) {
+      const formatted = new Date(dateStr).toLocaleDateString(currentLocale, {
+        day: 'numeric',
+        month: 'short',
+      });
+      return `${texts.today} (${formatted})`;
+    }
+    if (dateStr === yesterdayDateStr) {
+      const formatted = new Date(dateStr).toLocaleDateString(currentLocale, {
+        day: 'numeric',
+        month: 'short',
+      });
+      return `${texts.yesterday} (${formatted})`;
+    }
+    return new Date(dateStr).toLocaleDateString(currentLocale, {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  // Filtered sessions based on calendar day selector
+  const filteredSessions = selectedDateFilter
+    ? sessions.filter((s) => s.startTime.startsWith(selectedDateFilter))
+    : sessions;
+
+  // Calculate day metrics for filtered date
+  const filteredDayTotalMins = filteredSessions.reduce((acc, curr) => acc + curr.durationMinutes, 0);
+
+  // History display limitation:
+  // - Default: max 6 items
+  // - Expanded: all items rendered inside a scrollable box (height ~10 items) so user scrolls with finger
+  const displayedSessions = isHistoryExpanded
+    ? filteredSessions
+    : filteredSessions.slice(0, 6);
+
+  /* ========================================================================= */
+  /* KONCEPTY / DRAFTS - Export do Google Drive & CSV (nateraz nezobrazované v UI) */
+  /* ========================================================================= */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _generateCSVContentDraft = () => {
     const headers = [
       texts.csvHeaders.date,
       texts.csvHeaders.startTime,
@@ -938,13 +1217,11 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
     return '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
   };
 
-  // 4. Export for Android (Capacitor), Google Drive, and Web Browsers
-  const handleExportCSV = async () => {
-    triggerHaptic('medium');
-    const csvContent = generateCSVContent();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _handleExportCSVDraft = async () => {
+    const csvContent = _generateCSVContentDraft();
     const filename = `baby-sleep-tracker-${todayDateStr}.csv`;
 
-    // 1. Android Capacitor Native Platform Check (installed APK)
     if (Capacitor.isNativePlatform()) {
       try {
         const writtenFile = await Filesystem.writeFile({
@@ -960,100 +1237,11 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
           url: writtenFile.uri,
           dialogTitle: texts.exportShareBtn,
         });
-
-        showToast(texts.toastCsvStarted);
         return;
       } catch (nativeErr) {
-        console.warn('Capacitor native export error, falling back:', nativeErr);
+        console.warn('Draft export error:', nativeErr);
       }
     }
-
-    // 2. Web Share API with File (Mobile Chrome / Safari)
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    try {
-      if (typeof navigator !== 'undefined' && 'share' in navigator && 'canShare' in navigator) {
-        const file = new File([blob], filename, { type: 'text/csv' });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: texts.exportCardTitle,
-            text: texts.exportCardSubtitle,
-            files: [file],
-          });
-          showToast(texts.toastCsvShared);
-          return;
-        }
-      }
-    } catch (shareErr) {
-      console.warn('Web Share API file share failed:', shareErr);
-    }
-
-    // 3. Web Share API with Text content (Android WebView fallback)
-    try {
-      if (typeof navigator !== 'undefined' && 'share' in navigator) {
-        await navigator.share({
-          title: texts.exportCardTitle,
-          text: csvContent,
-        });
-        showToast(texts.toastShared);
-        return;
-      }
-    } catch {
-      // ignore
-    }
-
-    // 4. Standard Browser Blob Download
-    try {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-      showToast(texts.toastCsvDownloaded);
-      return;
-    } catch {
-      // 5. Data URI fallback
-      const encoded = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
-      const a = document.createElement('a');
-      a.href = encoded;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-  };
-
-  // Copy raw CSV directly to clipboard for effortless paste into Google Sheets / Excel
-  const handleCopyRawCSV = () => {
-    triggerHaptic('light');
-    const csvContent = generateCSVContent();
-    navigator.clipboard.writeText(csvContent).then(() => {
-      showToast(texts.toastCsvCopied);
-    });
-  };
-
-  // Copy quick summary to clipboard
-  const handleCopySummary = () => {
-    triggerHaptic('light');
-    const summaryLines = [
-      `${texts.csvSummary.title} (${todayDateStr})`,
-      `${texts.csvSummary.todayTotal} ${formatDuration(todayTotalMins)} (${todaySessions.length} ${texts.csvSummary.napsCount})`,
-      '',
-      texts.csvSummary.recentRecords,
-      ...sessions.slice(0, 5).map((s) => {
-        const d = new Date(s.startTime).toLocaleDateString(currentLocale);
-        const st = new Date(s.startTime).toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' });
-        const et = new Date(s.endTime).toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' });
-        const typeStr = s.type === 'day-nap' ? texts.dayNap : texts.nightSleep;
-        return `• ${d} [${st} – ${et}] ${formatDuration(s.durationMinutes)} (${typeStr})${s.notes ? ` - ${s.notes}` : ''}`;
-      }),
-    ];
-
-    navigator.clipboard.writeText(summaryLines.join('\n')).then(() => {
-      showToast(texts.toastSummaryCopied);
-    });
   };
 
   return (
@@ -1061,7 +1249,6 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
       {/* Toast alert */}
       {toastMessage && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-2xl shadow-2xl text-xs flex items-center gap-2 border border-emerald-300 animate-in fade-in slide-in-from-top-4">
-          <Check className="w-4 h-4 stroke-[3]" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -1168,7 +1355,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
           {/* Stat 2: Dnešné spánky */}
           <div className="flex items-center gap-3 min-w-0 pl-2 sm:pl-3 border-l border-white/10">
             <div className="w-10 h-10 rounded-2xl bg-purple-500/15 border border-purple-400/25 text-purple-300 flex items-center justify-center shrink-0 shadow-sm">
-              <Calendar className="w-5 h-5" />
+              <CalendarIcon className="w-5 h-5" />
             </div>
             <div className="min-w-0">
               <span className="text-[10px] uppercase tracking-wider text-white/50 block font-semibold truncate">
@@ -1352,164 +1539,236 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
         )}
       </div>
 
-      {/* Export Section for Google Drive / Sheets - Collapsible (truncated to description with arrow) */}
-      <div className="rounded-3xl bg-slate-900/60 border border-white/10 overflow-hidden transition-all duration-300">
-        <button
-          type="button"
-          onClick={() => {
-            triggerHaptic('light');
-            setIsExportExpanded(!isExportExpanded);
-          }}
-          className="w-full p-4 flex items-center justify-between text-left hover:bg-white/5 active:bg-white/10 transition-colors select-none"
-          aria-expanded={isExportExpanded}
-        >
-          <div className="flex items-center gap-2.5 min-w-0 pr-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0">
-              <FileSpreadsheet className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-xs font-bold text-white truncate">
-                {texts.exportCardTitle}
-              </h3>
-              <p className="text-[11px] text-white/50 truncate mt-0.5">
-                {texts.exportCardSubtitle}
-              </p>
-            </div>
-          </div>
-
-          <div
-            className={`w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-white/60 transition-transform duration-300 shrink-0 ${
-              isExportExpanded ? 'rotate-180 bg-white/10 text-white' : ''
-            }`}
-          >
-            <ChevronDown className="w-4 h-4" />
-          </div>
-        </button>
-
-        {isExportExpanded && (
-          <div className="px-4 pb-4 pt-1 flex flex-col gap-3 border-t border-white/5 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="flex flex-wrap items-center gap-2 mt-1">
-              <button
-                type="button"
-                onClick={handleExportCSV}
-                className="flex-1 min-w-[130px] py-2.5 px-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950/40 active:scale-95 transition-all"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>{texts.exportShareBtn}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleCopyRawCSV}
-                className="py-2.5 px-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-medium text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                title={texts.copyCSVBtn}
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{texts.copyCSVBtn}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleCopySummary}
-                className="py-2.5 px-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-medium text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                title={texts.copySummaryBtn}
-              >
-                <Copy className="w-3.5 h-3.5" />
-                <span>{texts.copySummaryBtn}</span>
-              </button>
-            </div>
-
-            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-white/5 border border-white/5 text-[10px] text-white/50 leading-relaxed">
-              <Info className="w-3.5 h-3.5 shrink-0 text-emerald-400 mt-0.5" />
-              <span>{texts.exportInfo}</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* History List */}
-      <div className="flex flex-col gap-2">
+      {/* History Section Header with Day/Calendar Switcher */}
+      <div className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-white/60">
-            {texts.historyTitle} ({sessions.length})
-          </h3>
-          {sessions.length > 0 && (
-            <span className="text-[11px] text-white/40">
-              {texts.latestFirst}
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white/70">
+              {texts.historyTitle}
+            </h3>
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/10 font-bold text-white/80">
+              {filteredSessions.length}
             </span>
+          </div>
+
+          {selectedDateFilter ? (
+            <span className="text-[11px] text-amber-300/80 font-medium">
+              {texts.dayTotalLabel} {formatDuration(filteredDayTotalMins)}
+            </span>
+          ) : (
+            sessions.length > 0 && (
+              <span className="text-[11px] text-white/40">{texts.latestFirst}</span>
+            )
           )}
         </div>
 
-        {sessions.length === 0 ? (
-          <div className="p-8 rounded-2xl bg-slate-900/40 border border-white/5 text-center text-white/40 text-xs">
-            {texts.noHistory}
+        {/* Calendar Day Switcher Toolbar */}
+        <div className="p-3 rounded-2xl bg-slate-900/60 border border-white/10 flex flex-col gap-2 shadow-sm">
+          {/* Quick preset chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setSelectedDateFilter(null);
+              }}
+              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all touch-manipulation flex items-center gap-1 shrink-0 ${
+                selectedDateFilter === null
+                  ? 'bg-indigo-500 text-white shadow-sm font-bold'
+                  : 'bg-white/5 text-white/60 hover:text-white/80 border border-white/10'
+              }`}
+            >
+              <Filter className="w-3 h-3" />
+              <span>{texts.allDays}</span>
+            </button>
+
+            {/* Calendar modal date picker opener */}
+            <button
+              type="button"
+              onClick={handleOpenCalendarModal}
+              className={`ml-auto px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition-all touch-manipulation flex items-center gap-1 shrink-0 ${
+                selectedDateFilter &&
+                selectedDateFilter !== todayDateStr &&
+                selectedDateFilter !== yesterdayDateStr
+                  ? 'bg-amber-400 text-slate-950 shadow-sm font-bold'
+                  : 'bg-white/10 hover:bg-white/15 text-white/80 border border-white/15'
+              }`}
+            >
+              <CalendarIcon className="w-3.5 h-3.5" />
+              <span>{texts.pickDate}</span>
+            </button>
+          </div>
+
+          {/* Stepper bar: ◀ Selected Day Display ▶ */}
+          {selectedDateFilter && (
+            <div className="flex items-center justify-between pt-1 border-t border-white/5">
+              <button
+                type="button"
+                onClick={() => handleShiftDay(-1)}
+                className="h-8 px-2 rounded-xl bg-white/5 hover:bg-white/10 active:scale-95 text-white/70 flex items-center gap-1 text-xs transition-all touch-manipulation border border-white/10"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden xs:inline text-[11px]">-1d</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenCalendarModal}
+                className="flex items-center gap-1.5 text-xs font-semibold text-white hover:text-amber-300 transition-colors py-1 px-2 rounded-lg hover:bg-white/5 active:scale-95"
+              >
+                <CalendarIcon className="w-3.5 h-3.5 text-amber-300" />
+                <span>{formatCalendarDateLabel(selectedDateFilter)}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleShiftDay(1)}
+                disabled={selectedDateFilter >= todayDateStr}
+                className={`h-8 px-2 rounded-xl text-xs flex items-center gap-1 transition-all touch-manipulation border ${
+                  selectedDateFilter >= todayDateStr
+                    ? 'opacity-30 pointer-events-none border-white/5 text-white/30'
+                    : 'bg-white/5 hover:bg-white/10 active:scale-95 text-white/70 border-white/10'
+                }`}
+              >
+                <span className="hidden xs:inline text-[11px]">+1d</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* History List: Max 6 items default, expandable to 10 + finger scroll */}
+        {filteredSessions.length === 0 ? (
+          <div className="p-6 rounded-2xl bg-slate-900/40 border border-white/5 text-center text-white/50 text-xs flex flex-col items-center gap-2">
+            <span>
+              {selectedDateFilter ? texts.noSessionsForDate : texts.noHistory}
+            </span>
+            {selectedDateFilter && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setSelectedDateFilter(null);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-[11px] font-semibold transition-all mt-1"
+              >
+                {texts.showAllDaysBtn}
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {sessions.map((s) => {
-              const startDate = new Date(s.startTime);
-              const endDate = new Date(s.endTime);
-              const dateStr = startDate.toLocaleDateString(currentLocale, {
-                day: 'numeric',
-                month: 'short',
-              });
-              const startStr = startDate.toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' });
-              const endStr = endDate.toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' });
+            {/* Scrollable container when expanded */}
+            <div
+              className={`flex flex-col gap-2 transition-all ${
+                isHistoryExpanded
+                  ? 'max-h-[580px] overflow-y-auto pr-1 scrollbar-thin'
+                  : ''
+              }`}
+            >
+              {displayedSessions.map((s) => {
+                const startDate = new Date(s.startTime);
+                const endDate = new Date(s.endTime);
+                const dateStr = startDate.toLocaleDateString(currentLocale, {
+                  day: 'numeric',
+                  month: 'short',
+                });
+                const startStr = startDate.toLocaleTimeString(currentLocale, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                });
+                const endStr = endDate.toLocaleTimeString(currentLocale, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                });
 
-              return (
-                <div
-                  key={s.id}
-                  className="p-3.5 rounded-2xl bg-slate-900/80 border border-white/10 flex items-center justify-between gap-3 shadow-sm hover:border-white/20 transition-all"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                        s.type === 'night-sleep'
-                          ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/30'
-                          : 'bg-amber-500/20 text-amber-300 border border-amber-400/30'
-                      }`}
-                    >
-                      {s.type === 'night-sleep' ? (
-                        <Moon className="w-4 h-4" />
-                      ) : (
-                        <Sun className="w-4 h-4" />
-                      )}
-                    </div>
-
-                    <div className="min-w-0 truncate">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-white">
-                          {startStr} – {endStr}
-                        </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/10 font-bold text-white/80">
-                          {formatDuration(s.durationMinutes)}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-[11px] text-white/50 mt-0.5">
-                        <span>{dateStr}</span>
-                        <span>·</span>
-                        <span>{getQualityText(s.quality)}</span>
-                        {s.notes && (
-                          <>
-                            <span>·</span>
-                            <span className="italic truncate text-white/60">"{s.notes}"</span>
-                          </>
+                return (
+                  <div
+                    key={s.id}
+                    className="p-3.5 rounded-2xl bg-slate-900/80 border border-white/10 flex items-center justify-between gap-3 shadow-sm hover:border-white/20 transition-all"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                          s.type === 'night-sleep'
+                            ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/30'
+                            : 'bg-amber-500/20 text-amber-300 border border-amber-400/30'
+                        }`}
+                      >
+                        {s.type === 'night-sleep' ? (
+                          <Moon className="w-4 h-4" />
+                        ) : (
+                          <Sun className="w-4 h-4" />
                         )}
                       </div>
-                    </div>
-                  </div>
 
-                  <button
-                    onClick={() => handleDeleteSession(s.id)}
-                    className="p-2 rounded-xl text-white/30 hover:text-red-400 hover:bg-red-500/10 active:scale-95 transition-all shrink-0"
-                    title={texts.deleteTitle}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              );
-            })}
+                      <div className="min-w-0 truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-white">
+                            {startStr} – {endStr}
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/10 font-bold text-white/80">
+                            {formatDuration(s.durationMinutes)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-[11px] text-white/50 mt-0.5">
+                          <span>{dateStr}</span>
+                          <span>·</span>
+                          <span>{getQualityText(s.quality)}</span>
+                          {s.notes && (
+                            <>
+                              <span>·</span>
+                              <span className="italic truncate text-white/60">
+                                "{s.notes}"
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleDeleteSession(s.id)}
+                      className="p-2 rounded-xl text-white/30 hover:text-red-400 hover:bg-red-500/10 active:scale-95 transition-all shrink-0"
+                      title={texts.deleteTitle}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Expand / Collapse Button when more than 6 sessions */}
+            {filteredSessions.length > 6 && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setIsHistoryExpanded(!isHistoryExpanded);
+                }}
+                className="w-full py-2.5 px-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-sm mt-0.5"
+              >
+                <span>
+                  {isHistoryExpanded
+                    ? texts.showLessSessions
+                    : `${texts.showMoreSessions} (${filteredSessions.length - 6})`}
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    isHistoryExpanded ? 'rotate-180 text-amber-300' : ''
+                  }`}
+                />
+              </button>
+            )}
+
+            {/* Scroll indicator when expanded with more than 10 sessions */}
+            {isHistoryExpanded && filteredSessions.length > 10 && (
+              <p className="text-[10px] text-center text-white/40 italic">
+                {texts.scrollHint}
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -1617,6 +1876,170 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
                 className="flex-1 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-950/40 active:scale-95 transition-all"
               >
                 {texts.saveToHistory}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Month Calendar Modal for picking specific day */}
+      {isCalendarModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-sm rounded-3xl bg-slate-900 border border-white/20 p-5 flex flex-col gap-4 shadow-2xl animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-1 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4 text-amber-300" />
+                <h3 className="text-sm font-bold text-white">
+                  {texts.calendarModalTitle}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setIsCalendarModalOpen(false);
+                }}
+                className="p-1.5 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                title={texts.calendarCloseBtn}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Month & Year Navigation */}
+            <div className="flex items-center justify-between px-1">
+              <button
+                type="button"
+                onClick={handlePrevMonth}
+                className="h-8 w-8 rounded-xl bg-white/5 hover:bg-white/15 active:scale-95 text-white/80 flex items-center justify-center transition-all border border-white/10"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              <span className="text-sm font-bold text-white tracking-wide">
+                {texts.monthNames[calendarViewingMonth]} {calendarViewingYear}
+              </span>
+
+              <button
+                type="button"
+                onClick={handleNextMonth}
+                disabled={
+                  calendarViewingYear > new Date().getFullYear() ||
+                  (calendarViewingYear === new Date().getFullYear() &&
+                    calendarViewingMonth >= new Date().getMonth())
+                }
+                className={`h-8 w-8 rounded-xl flex items-center justify-center transition-all border ${
+                  calendarViewingYear > new Date().getFullYear() ||
+                  (calendarViewingYear === new Date().getFullYear() &&
+                    calendarViewingMonth >= new Date().getMonth())
+                    ? 'opacity-25 pointer-events-none border-white/5 text-white/30'
+                    : 'bg-white/5 hover:bg-white/15 active:scale-95 text-white/80 border-white/10'
+                }`}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Week days header (Mon - Sun) */}
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {texts.weekDaysShort.map((day) => (
+                <span key={day} className="text-[10px] font-bold text-white/40 uppercase">
+                  {day}
+                </span>
+              ))}
+            </div>
+
+            {/* Days grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {(() => {
+                const daysInMonth = new Date(calendarViewingYear, calendarViewingMonth + 1, 0).getDate();
+                // Monday is 0, Sunday is 6
+                const firstDayIndex = (new Date(calendarViewingYear, calendarViewingMonth, 1).getDay() + 6) % 7;
+                const cells = [];
+
+                // Blank cells for preceding days
+                for (let i = 0; i < firstDayIndex; i++) {
+                  cells.push(<div key={`blank-${i}`} className="h-9 w-9" />);
+                }
+
+                // Month days 1..daysInMonth
+                for (let d = 1; d <= daysInMonth; d++) {
+                  const mStr = String(calendarViewingMonth + 1).padStart(2, '0');
+                  const dStr = String(d).padStart(2, '0');
+                  const dayDateStr = `${calendarViewingYear}-${mStr}-${dStr}`;
+                  const isSelected = selectedDateFilter === dayDateStr;
+                  const isToday = todayDateStr === dayDateStr;
+                  const isFuture = dayDateStr > todayDateStr;
+                  const hasSessions = sessions.some((s) => s.startTime.startsWith(dayDateStr));
+
+                  cells.push(
+                    <button
+                      key={dayDateStr}
+                      type="button"
+                      disabled={isFuture}
+                      onClick={() => handleSelectDay(dayDateStr)}
+                      className={`h-9 w-9 rounded-xl flex flex-col items-center justify-center relative transition-all touch-manipulation text-xs font-semibold ${
+                        isSelected
+                          ? 'bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-400/30 scale-105'
+                          : isToday
+                          ? 'border border-amber-400/80 text-amber-300 bg-amber-400/10'
+                          : isFuture
+                          ? 'opacity-20 pointer-events-none text-white/30'
+                          : 'bg-white/5 hover:bg-white/15 text-white/90 active:scale-95'
+                      }`}
+                    >
+                      <span>{d}</span>
+                      {hasSessions && (
+                        <span
+                          className={`w-1 h-1 rounded-full absolute bottom-1 ${
+                            isSelected ? 'bg-slate-950' : 'bg-amber-400'
+                          }`}
+                        />
+                      )}
+                    </button>
+                  );
+                }
+
+                return cells;
+              })()}
+            </div>
+
+            {/* Modal Quick Actions Footer */}
+            <div className="flex items-center gap-2 pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setSelectedDateFilter(todayDateStr);
+                  setIsCalendarModalOpen(false);
+                }}
+                className="flex-1 py-2 px-2.5 rounded-xl bg-white/10 hover:bg-white/15 active:scale-95 text-white/90 font-semibold text-xs transition-all text-center"
+              >
+                {texts.calendarTodayBtn}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setSelectedDateFilter(null);
+                  setIsCalendarModalOpen(false);
+                }}
+                className="flex-1 py-2 px-2.5 rounded-xl bg-white/10 hover:bg-white/15 active:scale-95 text-white/90 font-semibold text-xs transition-all text-center"
+              >
+                {texts.calendarAllDaysBtn}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setIsCalendarModalOpen(false);
+                }}
+                className="py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 active:scale-95 text-white/60 font-medium text-xs transition-all"
+              >
+                {texts.calendarCloseBtn}
               </button>
             </div>
           </div>

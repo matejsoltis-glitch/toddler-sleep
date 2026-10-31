@@ -10,53 +10,57 @@ interface LiquidSliderProps {
   step: number;
   onChange: (val: number) => void;
   ariaLabel: string;
+  compact?: boolean;
 }
 
 export const LiquidSlider: React.FC<LiquidSliderProps> = ({
   label,
   icon,
   value,
-  min,
-  max,
-  step,
+  min = 0,
+  max = 100,
+  step = 1,
   onChange,
   ariaLabel,
+  compact = false,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
-  // Normalize percentage from min to max strictly between 0 and 100
-  const percentage = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
-
-  // Thumb radius in pixels
-  const thumbRadius = 10; // for 20px diameter thumb
+  // Safe numeric normalization guaranteed never to be NaN or produce runtime exceptions
+  const numMin = typeof min === 'number' && isFinite(min) ? min : 0;
+  const numMax = typeof max === 'number' && isFinite(max) && max > numMin ? max : numMin + 1;
+  const numValue =
+    typeof value === 'number' && isFinite(value)
+      ? Math.max(numMin, Math.min(numMax, value))
+      : numMin;
+  const range = numMax - numMin;
+  const percentage = Math.max(0, Math.min(100, ((numValue - numMin) / range) * 100));
 
   return (
-    <div className="w-full flex flex-col gap-1.5 select-none">
-      {/* Slider Label: Strictly single-word label with icon (percentage deleted) */}
-      <div className="flex items-center text-xs px-0.5">
-        <span className="flex items-center gap-2 text-white/80 font-medium text-xs">
+    <div className={`w-full flex flex-col ${compact ? 'gap-0.5' : 'gap-1'} select-none`}>
+      {/* Slider Label Row: Icon + Label on left, Percentage value on right (30% more compact) */}
+      <div className="flex items-center justify-between text-[11px] px-0.5">
+        <span className="flex items-center gap-1.5 text-white/80 font-medium text-[11px]">
           {icon}
           <span className="tracking-wide text-slate-200">{label}</span>
         </span>
+        <span className="font-mono text-[9px] text-white/50">
+          {Math.round(percentage)}%
+        </span>
       </div>
 
-      {/* Interactive Liquid Slider Track */}
+      {/* Interactive Liquid Slider Track (No Ball/Knob, sleek water ripple) */}
       <div
         ref={trackRef}
-        className="relative w-full h-7 flex items-center cursor-pointer touch-none group"
+        className={`relative w-full ${compact ? 'h-4.5' : 'h-5.5'} flex items-center cursor-pointer touch-none group`}
       >
         {/* Visual Track Channel */}
-        <div className="relative w-full h-3.5 rounded-full bg-white/[0.08] border border-white/10 overflow-hidden shadow-inner">
+        <div className={`relative w-full ${compact ? 'h-2' : 'h-2.5'} rounded-full bg-white/[0.08] border border-white/10 overflow-hidden shadow-inner`}>
           {/* Filled Liquid Water Container */}
           <div
-            className="absolute top-0 bottom-0 left-0 overflow-hidden transition-[width] duration-75 ease-out rounded-l-full"
-            style={{
-              width:
-                percentage === 0
-                  ? '0%'
-                  : `calc(${thumbRadius}px + ${(percentage / 100)} * (100% - ${thumbRadius * 2}px))`,
-            }}
+            className="absolute top-0 bottom-0 left-0 overflow-hidden transition-[width] duration-75 ease-out rounded-full"
+            style={{ width: `${percentage}%` }}
           >
             {/* Base liquid silver-gray gradient */}
             <div className="absolute inset-0 bg-gradient-to-r from-slate-600/50 via-slate-400/60 to-slate-300/70" />
@@ -102,35 +106,28 @@ export const LiquidSlider: React.FC<LiquidSliderProps> = ({
           </div>
         </div>
 
-        {/* Sleek Silver Circular Handle (Ball) - Exactly aligned */}
-        <div
-          className={`absolute top-1/2 w-5 h-5 rounded-full bg-slate-100 border border-white/80 shadow-[0_2px_8px_rgba(0,0,0,0.5)] pointer-events-none transition-transform duration-100 -translate-y-1/2 flex items-center justify-center ${
-            isDragging ? 'scale-110 shadow-[0_0_12px_rgba(255,255,255,0.4)]' : ''
-          }`}
-          style={{
-            left: `calc(${thumbRadius}px + ${(percentage / 100)} * (100% - ${thumbRadius * 2}px))`,
-            transform: 'translate(-50%, -50%)',
-          }}
-        >
-          {/* Subtle center tactile pip */}
-          <div className="w-1.5 h-1.5 rounded-full bg-slate-400/60" />
-        </div>
-
         {/* Real Accessible Range Input Overlay */}
         <input
           type="range"
-          min={min}
-          max={max}
+          min={numMin}
+          max={numMax}
           step={step}
-          value={value}
+          value={numValue}
           onChange={(e) => {
-            const nextVal = step < 1 ? parseFloat(e.target.value) : parseInt(e.target.value, 10);
-            onChange(nextVal);
-            triggerHaptic(5);
+            try {
+              const raw = e.target.value;
+              const nextVal = step < 1 ? parseFloat(raw) : parseInt(raw, 10);
+              if (!isNaN(nextVal) && isFinite(nextVal)) {
+                onChange(nextVal);
+              }
+            } catch {
+              // ignore
+            }
+            triggerHaptic(4);
           }}
           onPointerDown={() => {
             setIsDragging(true);
-            triggerHaptic(8);
+            triggerHaptic(6);
           }}
           onPointerUp={() => setIsDragging(false)}
           onPointerCancel={() => setIsDragging(false)}

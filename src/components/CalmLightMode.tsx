@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { SunMedium, Maximize2, Sparkles, Check, Play, Pause, RefreshCw, ArrowLeft } from 'lucide-react';
-import { getPalettes } from '../constants/palettes';
+import { SunMedium, Maximize2, Sparkles, Check, Play, Pause, RefreshCw, ChevronDown } from 'lucide-react';
+import { getPalettes, saveCustomPaletteColors } from '../constants/palettes';
 import { LightPalette, LightSpeed, Language } from '../types';
 import { translations } from '../i18n/translations';
 import { triggerHaptic } from '../utils/haptics';
+import { ColorWheelPicker } from './ColorWheelPicker';
 
 interface CalmLightModeProps {
   language: Language;
@@ -33,8 +34,18 @@ export const CalmLightMode: React.FC<CalmLightModeProps> = ({
   colorIndex: externalColorIndex,
 }) => {
   const [internalColorIndex, setInternalColorIndex] = useState(0);
+  const [isPaletteSelectorExpanded, setIsPaletteSelectorExpanded] = useState(false);
   const t = translations[language].modes.light;
   const palettes = getPalettes(language);
+
+  const handleCustomColorsChange = (newColors: string[]) => {
+    saveCustomPaletteColors(newColors);
+    const updated: LightPalette = {
+      ...selectedPalette,
+      colors: newColors,
+    };
+    onSelectPalette(updated);
+  };
 
   // Speed timings in milliseconds
   const speedDurations: Record<LightSpeed, number> = {
@@ -69,20 +80,21 @@ export const CalmLightMode: React.FC<CalmLightModeProps> = ({
 
       {/* Visual Glowing Sphere / Night Light Preview */}
       <div className="relative overflow-hidden rounded-3xl bg-slate-900/70 border border-white/10 p-5 sm:p-6 flex flex-col items-center justify-center text-center shadow-2xl backdrop-blur-md">
-        {/* Ambient background glow */}
+        {/* Ambient background glow: maskImage with real backgroundColor enables continuous smooth color interpolation */}
         <div
-          className="absolute inset-0 pointer-events-none transition-colors duration-[3500ms] ease-in-out opacity-35 blur-3xl"
+          className="absolute inset-0 pointer-events-none blur-3xl transition-colors ease-in-out opacity-45"
           style={{
-            background: isLightOn
-              ? `radial-gradient(circle at center, ${currentColor} 0%, transparent 70%)`
-              : 'transparent',
+            backgroundColor: isLightOn ? currentColor : 'transparent',
+            maskImage: 'radial-gradient(circle at center, black 0%, black 40%, transparent 75%)',
+            WebkitMaskImage: 'radial-gradient(circle at center, black 0%, black 40%, transparent 75%)',
+            transitionDuration: `${Math.round(speedDurations[speed] * 0.92)}ms`,
           }}
         />
 
-        {/* Central glowing light disc */}
+        {/* Central glowing light disc: continuous fluid color transition */}
         <div className="relative z-10 flex flex-col items-center my-2">
           <div
-            className={`w-36 h-36 rounded-full shadow-2xl transition-all duration-[3000ms] ease-in-out flex items-center justify-center border-4 border-white/20 ${
+            className={`w-36 h-36 rounded-full shadow-2xl transition-all ease-in-out flex items-center justify-center border-4 border-white/20 ${
               isLightOn ? 'scale-100' : 'scale-90 opacity-30 grayscale'
             } ${speed === 'breathing' && isLightOn ? 'animate-pulse' : ''}`}
             style={{
@@ -91,6 +103,7 @@ export const CalmLightMode: React.FC<CalmLightModeProps> = ({
                 ? `0 0 60px ${currentColor}99, inset 0 0 25px #ffffff66`
                 : 'none',
               filter: `brightness(${brightness / 100})`,
+              transitionDuration: `${Math.round(speedDurations[speed] * 0.92)}ms`,
             }}
           >
             <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 text-white drop-shadow">
@@ -225,60 +238,136 @@ export const CalmLightMode: React.FC<CalmLightModeProps> = ({
         </div>
       </div>
 
-      {/* Palette Selection List */}
+      {/* Soothing Color Spectrum Selection: Shows ONLY active palette; click to expand smoothly */}
       <div className="flex flex-col gap-2">
-        <h3 className="text-xs font-semibold tracking-wider text-white/70 uppercase">
-          {t.palettesTitle}
-        </h3>
-
-        <div className="grid grid-cols-1 gap-2">
-          {palettes.map((palette) => {
-            const isSelected = selectedPalette.id === palette.id;
-            return (
-              <button
-                key={palette.id}
-                onClick={() => {
-                  triggerHaptic(8);
-                  onSelectPalette(palette);
-                }}
-                className={`text-left p-3.5 rounded-2xl border transition-all duration-200 active:scale-[0.98] touch-manipulation flex flex-col gap-2 ${
-                  isSelected
-                    ? 'bg-white/10 border-amber-400/80 ring-1 ring-amber-400/50 text-white shadow-md'
-                    : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/10 text-white/80'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span className="font-semibold text-xs text-white truncate">
-                    {palette.name}
-                  </span>
-                  {isSelected && (
-                    <div className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0">
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Color swatches strip */}
-                <div className="flex items-center h-2.5 w-full rounded-full overflow-hidden shadow-inner">
-                  {palette.colors.map((c, i) => (
-                    <div
-                      key={i}
-                      className="flex-1 h-full"
-                      style={{ backgroundColor: c }}
-                    />
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between text-[11px] text-white/50">
-                  <span className="truncate">{palette.mood}</span>
-                  <span className="text-[10px] text-amber-200/70 font-mono">
-                    {palette.colors.length} {t.shadesCount}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
+        <div className="flex items-center justify-between px-0.5">
+          <h3 className="text-xs font-semibold tracking-wider text-white/70 uppercase">
+            {t.palettesTitle}
+          </h3>
+          <span className="text-[11px] text-amber-300/80 font-medium">
+            {isPaletteSelectorExpanded ? (language === 'sk' ? 'Všetky palety' : 'All palettes') : (t.activePaletteOnly || 'Aktívna paleta')}
+          </span>
         </div>
+
+        {/* 1. Active Palette Card */}
+        <div
+          onClick={() => {
+            triggerHaptic(8);
+            setIsPaletteSelectorExpanded((prev) => !prev);
+          }}
+          className="text-left p-3.5 rounded-2xl border transition-all duration-300 active:scale-[0.99] touch-manipulation flex flex-col gap-2.5 bg-slate-900/80 border-amber-400/80 ring-1 ring-amber-400/40 text-white shadow-lg cursor-pointer"
+        >
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+              <span className="font-semibold text-xs text-white truncate">
+                {selectedPalette.name}
+              </span>
+            </div>
+
+            {/* Expand / Collapse toggle button */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[11px] text-amber-300 font-medium">
+                {isPaletteSelectorExpanded
+                  ? (language === 'sk' ? 'Zbaliť výber' : 'Collapse')
+                  : (t.changePalette || 'Zmeniť paletu')}
+              </span>
+              <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center text-white/70">
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform duration-500 ease-out ${
+                    isPaletteSelectorExpanded ? 'rotate-180 text-amber-300' : ''
+                  }`}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Color swatches strip */}
+          <div className="flex items-center h-2.5 w-full rounded-full overflow-hidden shadow-inner">
+            {selectedPalette.colors.map((c, i) => (
+              <div
+                key={i}
+                className="flex-1 h-full"
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-white/50">
+            <span className="truncate">{selectedPalette.mood}</span>
+            <span className="text-[10px] text-amber-200/70 font-mono">
+              {selectedPalette.colors.length} {t.shadesCount}
+            </span>
+          </div>
+        </div>
+
+        {/* Smooth Accordion Expansion for all palettes (identical curve to sleep timer drawer) */}
+        <div
+          className={`overflow-hidden transition-all duration-520 ease-out ${
+            isPaletteSelectorExpanded ? 'timer-drawer-expand' : 'timer-drawer-collapse'
+          }`}
+        >
+          <div className="timer-drawer-inner flex flex-col gap-2 pt-1 pb-1">
+            {palettes.map((palette) => {
+              const isSelected = selectedPalette.id === palette.id;
+              return (
+                <button
+                  key={palette.id}
+                  onClick={() => {
+                    triggerHaptic(8);
+                    onSelectPalette(palette);
+                    setIsPaletteSelectorExpanded(false);
+                  }}
+                  className={`text-left p-3.5 rounded-2xl border transition-all duration-200 active:scale-[0.98] touch-manipulation flex flex-col gap-2 ${
+                    isSelected
+                      ? 'bg-amber-400/15 border-amber-400 ring-1 ring-amber-400/50 text-white shadow-md'
+                      : 'bg-slate-900/60 hover:bg-white/[0.08] border-white/10 text-white/80'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="font-semibold text-xs text-white truncate">
+                      {palette.name}
+                    </span>
+                    {isSelected && (
+                      <div className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center shrink-0">
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Color swatches strip */}
+                  <div className="flex items-center h-2.5 w-full rounded-full overflow-hidden shadow-inner">
+                    {palette.colors.map((c, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 h-full"
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-white/50">
+                    <span className="truncate">{palette.mood}</span>
+                    <span className="text-[10px] text-amber-200/70 font-mono">
+                      {palette.colors.length} {t.shadesCount}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* If Custom Spectrum is selected, display the Color Wheel Picker! */}
+        {selectedPalette.id === 'custom-spectrum' && (
+          <div className="mt-1 animate-mode-enter">
+            <ColorWheelPicker
+              colors={selectedPalette.colors}
+              onChangeColors={handleCustomColorsChange}
+              language={language}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

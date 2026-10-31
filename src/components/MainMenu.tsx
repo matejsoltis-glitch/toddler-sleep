@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Radio, Trees, Calendar, ChevronRight, Square, Play, Volume2, SunMedium } from 'lucide-react';
+import { Sparkles, Radio, Trees, Calendar, ChevronRight, Square, Play, Volume2, SunMedium, Layers } from 'lucide-react';
 import { AppMode, Language } from '../types';
 import { translations } from '../i18n/translations';
 import { triggerHaptic } from '../utils/haptics';
@@ -19,6 +19,8 @@ interface MainMenuProps {
   onChangeVolume: (volume: number) => void;
   brightness: number;
   onChangeBrightness: (brightness: number) => void;
+  componentsOpacity: number;
+  onChangeComponentsOpacity: (opacity: number) => void;
 }
 
 export const MainMenu: React.FC<MainMenuProps> = ({
@@ -34,6 +36,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onChangeVolume,
   brightness,
   onChangeBrightness,
+  componentsOpacity,
+  onChangeComponentsOpacity,
 }) => {
   const t = translations[language];
 
@@ -45,15 +49,15 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
   const isAnyPlaying = isLightActive || isWhiteNoiseActive || isNatureActive;
 
-  // Strictly single-word labels for the master sliders as requested
-  const sliderLabels: Record<Language, { volume: string; brightness: string }> = {
-    sk: { volume: 'Hlasitosť', brightness: 'Jas' },
-    cs: { volume: 'Hlasitost', brightness: 'Jas' },
-    en: { volume: 'Volume', brightness: 'Brightness' },
-    pl: { volume: 'Głośność', brightness: 'Jasność' },
-    hu: { volume: 'Hangerő', brightness: 'Fényerő' },
-    uk: { volume: 'Гучність', brightness: 'Яскравість' },
-    it: { volume: 'Volume', brightness: 'Luminosità' },
+  // Single-word labels for master sliders localized across 7 languages
+  const sliderLabels: Record<Language, { volume: string; brightness: string; opacity: string }> = {
+    sk: { volume: 'Hlasitosť', brightness: 'Jas', opacity: 'Priehľadnosť' },
+    cs: { volume: 'Hlasitost', brightness: 'Jas', opacity: 'Průhlednost' },
+    en: { volume: 'Volume', brightness: 'Brightness', opacity: 'Opacity' },
+    pl: { volume: 'Głośność', brightness: 'Jasność', opacity: 'Przezroczystość' },
+    hu: { volume: 'Hangerő', brightness: 'Fényerő', opacity: 'Átlátszóság' },
+    uk: { volume: 'Гучність', brightness: 'Яскравість', opacity: 'Прозорість' },
+    it: { volume: 'Volume', brightness: 'Luminosità', opacity: 'Trasparenza' },
   };
   const sliderNames = sliderLabels[language] || sliderLabels.en;
 
@@ -101,35 +105,46 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   ];
 
   return (
-    <div
-      className={`w-full max-w-md mx-auto flex flex-col gap-3 py-0.5 select-none transition-opacity duration-700 ease-out ${
-        isLightActive ? 'opacity-50' : 'opacity-100'
-      }`}
-    >
-      {/* Master Sliders: Stacked vertically, full width matching menu cards, elegant silver-gray liquid water ripple */}
-      <div className="w-full flex flex-col gap-3 px-0.5 pt-0.5 pb-1">
+    <div className="w-full max-w-md mx-auto flex flex-col gap-3 py-0.5 select-none transition-opacity duration-300 ease-out">
+      {/* Master Sliders: 30% more compact, intuitive 3-slider control panel */}
+      <div className="w-full p-2 sm:p-2.5 rounded-2xl bg-slate-900/70 border border-white/10 flex flex-col gap-1.5 shadow-sm">
         {/* 1. Master Volume Slider */}
         <LiquidSlider
           label={sliderNames.volume}
-          icon={<Volume2 className="w-4 h-4 text-slate-300 shrink-0" />}
+          icon={<Volume2 className="w-3 h-3 text-slate-300 shrink-0" />}
           value={volume}
           min={0}
           max={1}
           step={0.01}
           onChange={onChangeVolume}
           ariaLabel={sliderNames.volume}
+          compact={true}
         />
 
         {/* 2. Master Brightness Slider */}
         <LiquidSlider
           label={sliderNames.brightness}
-          icon={<SunMedium className="w-4 h-4 text-slate-300 shrink-0" />}
+          icon={<SunMedium className="w-3 h-3 text-slate-300 shrink-0" />}
           value={brightness}
           min={10}
           max={100}
           step={1}
           onChange={onChangeBrightness}
           ariaLabel={sliderNames.brightness}
+          compact={true}
+        />
+
+        {/* 3. Components Opacity Slider (5% to 100%) */}
+        <LiquidSlider
+          label={sliderNames.opacity}
+          icon={<Layers className="w-3 h-3 text-slate-300 shrink-0" />}
+          value={componentsOpacity}
+          min={5}
+          max={100}
+          step={1}
+          onChange={onChangeComponentsOpacity}
+          ariaLabel={sliderNames.opacity}
+          compact={true}
         />
       </div>
 
@@ -168,15 +183,14 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           </div>
         </div>
 
+        {/* Action button */}
         {isAnyPlaying ? (
           <button
             onClick={() => {
               triggerHaptic(12);
               onStopAll();
             }}
-            className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-500/40 text-xs font-semibold flex items-center gap-1.5 active:scale-95 touch-manipulation shrink-0 transition-colors"
-            title={t.statusCard.stopBtn}
-            aria-label={t.statusCard.stopBtn}
+            className="h-10 px-3.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-500/40 text-xs font-semibold flex items-center gap-1.5 active:scale-95 touch-manipulation transition-all shrink-0"
           >
             <Square className="w-3.5 h-3.5 fill-current" />
             <span>{t.statusCard.stopBtn}</span>
@@ -184,12 +198,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         ) : (
           <button
             onClick={() => {
-              triggerHaptic(12);
+              triggerHaptic(10);
               onResumePrevious();
             }}
-            className="min-h-[38px] px-3.5 py-1.5 rounded-xl bg-emerald-500 text-slate-950 hover:bg-emerald-400 border border-emerald-400/50 text-xs font-bold flex items-center gap-1.5 active:scale-95 touch-manipulation shrink-0 shadow-md transition-colors"
-            title={t.statusCard.startBtn}
-            aria-label={t.statusCard.startBtn}
+            className="h-10 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold flex items-center gap-1.5 active:scale-95 touch-manipulation transition-all shadow-md shadow-amber-400/20 shrink-0"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             <span>{t.statusCard.startBtn}</span>
@@ -197,45 +209,44 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         )}
       </div>
 
-      {/* 3 Main Mode Selection Cards - Refined, tactile, non-massive */}
+      {/* 4 Mode Grid Cards */}
       <div className="flex flex-col gap-2.5">
-        {modeCards.map((card) => {
-          const Icon = card.icon;
+        {modeCards.map((mode) => {
+          const Icon = mode.icon;
           return (
             <button
-              key={card.id}
+              key={mode.id}
               onClick={() => {
-                triggerHaptic(12);
-                onSelectMode(card.id);
+                triggerHaptic(8);
+                onSelectMode(mode.id);
               }}
-              className={`group relative text-left py-3 px-3.5 rounded-2xl border transition-all duration-200 active:scale-[0.98] touch-manipulation flex items-center justify-between bg-gradient-to-br ${card.gradient} shadow-md shadow-black/20`}
+              className={`w-full p-4 rounded-3xl border bg-gradient-to-r ${mode.gradient} bg-slate-900/60 hover:bg-slate-900/90 active:scale-[0.98] transition-all duration-200 flex items-center justify-between text-left touch-manipulation shadow-lg group backdrop-blur-sm`}
             >
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-3.5 min-w-0">
                 <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shadow-sm shrink-0 ${card.iconBg}`}
+                  className={`w-12 h-12 rounded-2xl ${mode.iconBg} flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform`}
                 >
-                  <Icon className="w-5 h-5 stroke-[2.2]" />
+                  <Icon className="w-6 h-6" />
                 </div>
-                <div className="truncate">
-                  <h3 className="text-sm font-semibold text-white tracking-wide leading-tight">
-                    {card.title}
-                  </h3>
-                  <p className="text-[11px] text-white/65 leading-tight mt-0.5">
-                    {card.subtitle}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-sm text-white truncate">
+                      {mode.title}
+                    </h3>
+                    {mode.isActive && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 shrink-0">
+                        {mode.activeBadge}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-white/60 truncate mt-0.5">
+                    {mode.subtitle}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                {card.isActive && (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-400 text-slate-950 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping" />
-                    {card.activeBadge}
-                  </span>
-                )}
-                <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white/70 group-hover:translate-x-0.5 transition-transform">
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </div>
+              <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40 group-hover:text-white group-hover:bg-white/10 transition-colors shrink-0 ml-2">
+                <ChevronRight className="w-4 h-4" />
               </div>
             </button>
           );
