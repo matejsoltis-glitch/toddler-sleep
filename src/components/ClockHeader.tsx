@@ -39,7 +39,7 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
   };
 
   return (
-    <header className="w-full border-b border-white/10 select-none bg-slate-950/70 backdrop-blur-md sticky top-0 z-30 pt-[8mm]">
+    <header className="w-full border-b border-white/10 select-none bg-slate-950/70 backdrop-blur-md sticky top-0 z-30 pt-[6mm]">
       {/* Main Top Header without any distracting clock, day or date */}
       <div className="w-full max-w-md mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
         {/* Left side: Day/Night status or Back button, with remaining timer positioned cleanly underneath */}
@@ -48,11 +48,11 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
             <button
               onClick={onBackToMenu}
               className="h-8 px-2.5 -ml-1 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/95 flex items-center gap-1.5 text-xs font-semibold transition-all touch-manipulation border border-white/15 shadow-sm"
-              title="Späť do hlavného menu"
-              aria-label="Späť do menu"
+              title={t.backToMenuTooltip}
+              aria-label={t.backToMenuTooltip}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>{language === 'sk' ? 'Hlavné menu' : language === 'cs' ? 'Hlavní menu' : 'Main Menu'}</span>
+              <span>{t.mainMenuButton}</span>
             </button>
           ) : (
             <div className="flex items-center gap-1.5 text-xs text-white/70">

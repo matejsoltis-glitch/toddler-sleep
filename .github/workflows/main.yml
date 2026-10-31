@@ -42,6 +42,11 @@ jobs:
           npx @capacitor/assets generate --android || true
           npx cap sync android
 
+      - name: Nastavenie verzie aplikácie v Androide (v1.0)
+        run: |
+          sed -i 's/versionName ".*"/versionName "1.0"/' android/app/build.gradle || true
+          sed -i 's/versionCode .*/versionCode 1/' android/app/build.gradle || true
+
       - name: Nastavenie celej obrazovky (Immersive Fullscreen)
         run: |
           sed -i '/<\/style>/i \        <item name="android:windowFullscreen">true</item>\n        <item name="android:windowContentOverlay">@null</item>' android/app/src/main/res/values/styles.xml

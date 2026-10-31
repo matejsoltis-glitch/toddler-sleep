@@ -210,6 +210,21 @@ export interface Translations {
     circadianScience: { name: string; desc: string; mood: string };
     customSpectrum: { name: string; desc: string; mood: string };
   };
+  mainMenuButton: string;
+  backToMenuTooltip: string;
+  authorNotice: {
+    title: string;
+    message: string;
+    email: string;
+    copyEmail: string;
+    copied: string;
+    close: string;
+  };
+  changelogModal: {
+    title: string;
+    version: string;
+    close: string;
+  };
 }
 
 export const translations: Record<Language, Translations> = {
@@ -458,6 +473,21 @@ export const translations: Record<Language, Translations> = {
         mood: 'Personalized palette',
       },
     },
+    mainMenuButton: 'Main Menu',
+    backToMenuTooltip: 'Back to main menu',
+    authorNotice: {
+      title: 'About the Author',
+      message: 'Created for all patient parents. For tips or bug reports, feel free to write to msglitchapps@gmail.com .',
+      email: 'msglitchapps@gmail.com',
+      copyEmail: 'Copy email',
+      copied: 'Copied!',
+      close: 'Close',
+    },
+    changelogModal: {
+      title: 'Version History & Changelog',
+      version: 'Version',
+      close: 'Close',
+    },
   },
   sk: {
     appName: 'Toddler sleep assistant',
@@ -703,6 +733,21 @@ export const translations: Record<Language, Translations> = {
         desc: 'Vlastný výber 2 až 6 upokojujúcich farieb pomocou interaktívneho farebného kolieska.',
         mood: 'Vlastná paleta',
       },
+    },
+    mainMenuButton: 'Hlavné menu',
+    backToMenuTooltip: 'Späť do hlavného menu',
+    authorNotice: {
+      title: 'O autorovi',
+      message: 'Vytvorené pre všetkých trpezlivých rodičov. Pre tipy alebo hlásenia chýb mi môžete písať na msglitchapps@gmail.com .',
+      email: 'msglitchapps@gmail.com',
+      copyEmail: 'Skopírovať e-mail',
+      copied: 'Skopírované!',
+      close: 'Zavrieť',
+    },
+    changelogModal: {
+      title: 'História verzií a novinky',
+      version: 'Verzia',
+      close: 'Zavrieť',
     },
   },
   cs: {
@@ -950,6 +995,21 @@ export const translations: Record<Language, Translations> = {
         mood: 'Vlastní paleta',
       },
     },
+    mainMenuButton: 'Hlavní menu',
+    backToMenuTooltip: 'Zpět do hlavního menu',
+    authorNotice: {
+      title: 'O autorovi',
+      message: 'Vytvořeno pro všechny trpělivé rodiče. Pro tipy nebo hlášení chyb mi můžete psát na msglitchapps@gmail.com .',
+      email: 'msglitchapps@gmail.com',
+      copyEmail: 'Zkopírovat e-mail',
+      copied: 'Zkopírováno!',
+      close: 'Zavřít',
+    },
+    changelogModal: {
+      title: 'Historie verzí a novinky',
+      version: 'Verze',
+      close: 'Zavřít',
+    },
   },
   pl: {
     appName: 'Toddler sleep assistant',
@@ -1195,6 +1255,21 @@ export const translations: Record<Language, Translations> = {
         desc: 'Własny wybór 2 do 6 uspokajających kolorów za pomocą interaktywnego koła barw.',
         mood: 'Własna paleta',
       },
+    },
+    mainMenuButton: 'Menu główne',
+    backToMenuTooltip: 'Powrót do menu głównego',
+    authorNotice: {
+      title: 'O autorze',
+      message: 'Stworzone dla wszystkich cierpliwych rodziców. W przypadku wskazówek lub zgłoszeń błędów możesz pisać na msglitchapps@gmail.com .',
+      email: 'msglitchapps@gmail.com',
+      copyEmail: 'Kopiuj e-mail',
+      copied: 'Skopiowano!',
+      close: 'Zamknij',
+    },
+    changelogModal: {
+      title: 'Historia wersji i nowości',
+      version: 'Wersja',
+      close: 'Zamknij',
     },
   },
   hu: {
@@ -1442,6 +1517,21 @@ export const translations: Record<Language, Translations> = {
         mood: 'Egyéni paletta',
       },
     },
+    mainMenuButton: 'Főmenü',
+    backToMenuTooltip: 'Vissza a főmenübe',
+    authorNotice: {
+      title: 'A készítőről',
+      message: 'Minden türelmes szülő számára készítve. Tippekért vagy hibajelentésekért írhat a msglitchapps@gmail.com címre.',
+      email: 'msglitchapps@gmail.com',
+      copyEmail: 'E-mail másolása',
+      copied: 'Másolva!',
+      close: 'Bezárás',
+    },
+    changelogModal: {
+      title: 'Verziótörténet és újdonságok',
+      version: 'Verzió',
+      close: 'Bezárás',
+    },
   },
   uk: {
     appName: 'Toddler sleep assistant',
@@ -1688,6 +1778,21 @@ export const translations: Record<Language, Translations> = {
         mood: 'Власна палітра',
       },
     },
+    mainMenuButton: 'Головне меню',
+    backToMenuTooltip: 'Назад до головного меню',
+    authorNotice: {
+      title: 'Про автора',
+      message: 'Створено для всіх терплячих батьків. Для порад або повідомлень про помилки пишіть на msglitchapps@gmail.com .',
+      email: 'msglitchapps@gmail.com',
+      copyEmail: 'Скопіювати e-mail',
+      copied: 'Скопійовано!',
+      close: 'Закрити',
+    },
+    changelogModal: {
+      title: 'Історія версій та оновлення',
+      version: 'Версія',
+      close: 'Закрити',
+    },
   },
   it: {
     appName: 'Toddler sleep assistant',
@@ -1933,6 +2038,21 @@ export const translations: Record<Language, Translations> = {
         desc: 'Selezione personale da 2 a 6 colori rilassanti tramite la ruota dei colori interattiva.',
         mood: 'Tavolozza personalizzata',
       },
+    },
+    mainMenuButton: 'Menu principale',
+    backToMenuTooltip: 'Torna al menu principale',
+    authorNotice: {
+      title: 'Sull\'autore',
+      message: 'Creato per tutti i genitori pazienti. Per suggerimenti o segnalazioni di bug, puoi scrivermi a msglitchapps@gmail.com .',
+      email: 'msglitchapps@gmail.com',
+      copyEmail: 'Copia e-mail',
+      copied: 'Copiato!',
+      close: 'Chiudi',
+    },
+    changelogModal: {
+      title: 'Cronologia versioni e novità',
+      version: 'Versione',
+      close: 'Chiudi',
     },
   },
 };

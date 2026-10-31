@@ -11,6 +11,8 @@ import { FullScreenLamp } from './components/FullScreenLamp';
 import { SettingsModal } from './components/SettingsModal';
 import { TouchLockOverlay } from './components/TouchLockOverlay';
 import { LanguageOnboardingModal } from './components/LanguageOnboardingModal';
+import { ChangelogModal } from './components/ChangelogModal';
+import { AuthorModal } from './components/AuthorModal';
 import { getPalettes } from './constants/palettes';
 import { soundEngine } from './services/soundEngine';
 import { isHapticsEnabled, setHapticsEnabled, triggerHaptic } from './utils/haptics';
@@ -40,6 +42,10 @@ export default function App() {
       return false;
     }
   });
+
+  // Modals for Changelog and Author Info
+  const [isChangelogOpen, setIsChangelogOpen] = useState<boolean>(false);
+  const [isAuthorOpen, setIsAuthorOpen] = useState<boolean>(false);
 
   // Language Personalization (First run defaults to English, persists once chosen)
   const [language, setLanguage] = useState<Language>(() => {
@@ -715,10 +721,10 @@ export default function App() {
         />
       </div>
 
-      {/* Mobile-tailored Main Container */}
+      {/* Mobile-tailored Main Container (pb-[2mm] ensures exact 2mm distance between last module and footer) */}
       <main
         style={{ opacity: safeOpacityRatio }}
-        className={`flex-1 w-full max-w-md mx-auto px-4 py-4 flex flex-col gap-4 transition-opacity duration-150 ${
+        className={`flex-1 w-full max-w-md mx-auto px-4 pt-3 pb-[2mm] flex flex-col gap-3 transition-opacity duration-150 ${
           isFullScreenLamp ? 'invisible pointer-events-none' : ''
         }`}
       >
@@ -804,8 +810,8 @@ export default function App() {
           )}
         </div>
 
-        {/* Universal Sleep Timer & Gradual Fade-out */}
-        <div className="mt-1">
+        {/* Universal Sleep Timer & Gradual Fade-out (Last module, 2mm above footer) */}
+        <div className="mt-0">
           <SleepTimerControls
             language={language}
             durationMinutes={durationMinutes}
@@ -825,19 +831,51 @@ export default function App() {
         </div>
       </main>
 
-      {/* Subtle Mobile Bottom Status with Version & Author */}
+      {/* Subtle Mobile Bottom Status with Halved Height (py-1.5), Interactive Changelog and Author Notice */}
       <footer
         style={{ opacity: safeOpacityRatio }}
-        className={`w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between text-[11px] text-white/40 border-t border-white/5 select-none transition-opacity duration-150 ${
+        className={`w-full max-w-md mx-auto px-4 py-1.5 flex items-center justify-between text-[11px] text-white/40 border-t border-white/5 select-none transition-opacity duration-150 ${
           isFullScreenLamp ? 'invisible pointer-events-none' : ''
         }`}
       >
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-white/60">Toddler sleep assistant</span>
-          <span className="text-[11px] font-bold italic text-white/50">v0.9.96</span>
-        </div>
-        <span>Autor: Matej Šoltis</span>
+        <button
+          onClick={() => {
+            triggerHaptic(8);
+            setIsChangelogOpen(true);
+          }}
+          className="flex items-center gap-1.5 hover:text-amber-300 transition-colors group cursor-pointer text-left"
+          title="Kliknite pre zobrazenie noviniek a histórie verzií"
+        >
+          <span className="font-medium text-white/60 group-hover:text-amber-200">Toddler sleep assistant</span>
+          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-white/10 group-hover:bg-amber-400 group-hover:text-slate-950 text-amber-300 transition-all">v1.0</span>
+        </button>
+
+        <button
+          onClick={() => {
+            triggerHaptic(8);
+            setIsAuthorOpen(true);
+          }}
+          className="hover:text-amber-300 transition-colors cursor-pointer text-right group"
+          title="Kliknite pre kontakt a informácie o autorovi"
+        >
+          <span>Autor: </span>
+          <span className="underline decoration-dotted underline-offset-2 text-white/60 group-hover:text-amber-200">Matej Šoltis</span>
+        </button>
       </footer>
+
+      {/* Interactive Changelog Modal (opens on version click) */}
+      <ChangelogModal
+        isOpen={isChangelogOpen}
+        onClose={() => setIsChangelogOpen(false)}
+        language={language}
+      />
+
+      {/* Interactive Author Notice Modal (opens on author click) */}
+      <AuthorModal
+        isOpen={isAuthorOpen}
+        onClose={() => setIsAuthorOpen(false)}
+        language={language}
+      />
     </div>
   );
 }

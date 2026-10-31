@@ -5,7 +5,14 @@ A calming sleep companion app for babies and toddlers featuring soothing multi-s
 ---
 ## Version History & Changelog
 
-### v0.9.96 (Latest)
+### v1.0 (Latest)
+- **Refined Mobile Layout Geometry**: Halved footer height (`py-1.5`) for a minimalist bottom bar, established an exact 2mm spacing between the sleep timer module and the footer, and trimmed 2mm from the top header padding (`pt-[6mm]`) for optimal screen utilization.
+- **Complete Main Menu Button Localization**: Fully localized the "Back to main menu" navigation button, tooltips, and aria-labels across Slovak, Czech, English, Polish, Hungarian, Ukrainian, and Italian.
+- **Interactive In-App Changelog Modal**: Tapping the version badge (`v1.0`) in the footer opens an interactive, scrollable modal displaying the complete version history, release notes, and latest features.
+- **Author Notice & Feedback Modal**: Tapping the author's name ("Autor: Matej Šoltis") displays a localized message for parents with direct email feedback contact (`msglitchapps@gmail.com`) and one-tap copy functionality.
+- **Official v1.0 Android Release Configuration**: Synchronized version 1.0 across `package.json`, root `capacitor.config.json`, and the GitHub Actions Android build workflow (`versionName "1.0"` / `versionCode 1`).
+
+### v0.9.96
 - **Responsive Vector Color Wheel**: Fixed color wheel clipping and off-center canvas distortion on high-DPI and mobile displays by rebuilding the wheel with hardware-accelerated CSS conic-radial gradients and percentage-based marker tracking, guaranteeing flawless alignment and responsive scaling on all screen sizes.
 - **Continuous Gentle Color Transitions**: Completely eliminated abrupt color jumping in Calm Light mode, Fullscreen Lamp, and ambient app background. Implemented dual cross-fading layers and mask-based continuous color interpolation so shades melt smoothly and progressively into each other without eye strain.
 - **Circadian Spectrum Naming Update**: Renamed palette to "Cirkadiálne spektrum" ("Circadian Spectrum") and updated description to "Na základe výskumu spánkových laboratórií" ("Based on sleep laboratory research") across all localized languages.
