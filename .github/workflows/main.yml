@@ -5,7 +5,6 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-# Práva na zápis, aby workflow mohol commitnúť vytvorený package-lock.json
 permissions:
   contents: write
 
@@ -22,12 +21,10 @@ jobs:
         with:
           node-version: 20
 
-      # Vygeneruje package-lock.json priamo v prostredí GitHubu
       - name: Generate package-lock.json
         run: |
-          npm install --package-lock-only
+          npm install --package-lock-only --legacy-peer-deps
 
-      # Ak súbor vznikol, automaticky ho commitne a pushne do repozitára
       - name: Commit package-lock.json
         run: |
           git config --global user.name "github-actions[bot]"
@@ -35,9 +32,8 @@ jobs:
           git add package-lock.json
           git diff --quiet && git diff --staged --quiet || (git commit -m "chore: add package-lock.json" && git push)
 
-      # Nainštaluje závislosti
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build web assets
         run: npm run build
