@@ -55,9 +55,18 @@ jobs:
           java-version: '21'
           cache: 'gradle'
 
-      - name: Decode Keystore
+      # Vytvorenie keystore priamo na mieste s vašimi údajmi
+      - name: Prepare Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\r\n' | base64 -d > android/app/release.keystore
+          keytool -genkeypair -v \
+            -keystore android/app/release.keystore \
+            -alias msglitchapps \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass "X5o9bGziMf" \
+            -keypass "X5o9bGziMf" \
+            -dname "CN=ToddlerSleep, OU=App, O=MSGlitch, L=Kostolna, ST=Slovakia, C=SK"
 
       - name: Build Android App Bundle (.aab)
         working-directory: android
@@ -65,17 +74,20 @@ jobs:
           chmod +x gradlew
           ./gradlew bundleRelease
 
+      # Podpísanie balíka vytvoreným kľúčom
       - name: Sign Android App Bundle
         run: |
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
             -keystore android/app/release.keystore \
-            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
-            -keypass "${{ secrets.KEY_PASSWORD }}" \
-            android/app/build/outputs/bundle/release/app-release.aab "${{ secrets.KEY_ALIAS }}"
+            -storepass "X5o9bGziMf" \
+            -keypass "X5o9bGziMf" \
+            android/app/build/outputs/bundle/release/app-release.aab msglitchapps
 
-      - name: Upload Signed AAB
+      - name: Upload Signed AAB and Keystore
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: android/app/build/outputs/bundle/release/app-release.aab
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/release.keystore
           retention-days: 7
