@@ -1,4 +1,4 @@
-name: Generate package-lock and Build AAB
+name: Generate Keystore, Build and Sign AAB
 
 on:
   push:
@@ -54,27 +54,41 @@ jobs:
           java-version: '21'
           cache: 'gradle'
 
-      - name: Decode Keystore
+      # Vytvorenie kľúča s vaším aliasom a heslom
+      - name: Generate New Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+          keytool -genkeypair -v \
+            -keystore android/app/toddler-release.keystore \
+            -alias msglitchapps \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass "X5o9bGziMf" \
+            -keypass "X5o9bGziMf" \
+            -dname "CN=ToddlerSleep, OU=App, O=MSGlitch, L=Kostolna, ST=Slovakia, C=SK"
 
+      # Zostavenie Android balíka .AAB
       - name: Build Android App Bundle (.aab)
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew bundleRelease
 
+      # Podpísanie vygenerovaným kľúčom
       - name: Sign Android App Bundle
         run: |
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore android/app/release.keystore \
-            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
-            -keypass "${{ secrets.KEY_PASSWORD }}" \
-            android/app/build/outputs/bundle/release/app-release.aab "${{ secrets.KEY_ALIAS }}"
+            -keystore android/app/toddler-release.keystore \
+            -storepass "X5o9bGziMf" \
+            -keypass "X5o9bGziMf" \
+            android/app/build/outputs/bundle/release/app-release.aab msglitchapps
 
-      - name: Upload Signed AAB
+      # Uloženie AAB a Keystore súboru do sťahovateľného archívu
+      - name: Upload Signed AAB and Keystore
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: android/app/build/outputs/bundle/release/app-release.aab
+          name: toddler-app-and-keystore
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/toddler-release.keystore
           retention-days: 7
