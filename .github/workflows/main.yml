@@ -17,10 +17,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build web assets
         run: npm run build
@@ -35,19 +34,16 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      # Vytvorenie keystore súboru z GitHub Secret
       - name: Decode Keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
 
-      # Build produkčného balíka .AAB
       - name: Build Android App Bundle (.aab)
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew bundleRelease
 
-      # Podpísanie balíka pomocou rsync / sign nástroja
       - name: Sign Android App Bundle
         uses: r0adkll/sign-android-release@v1
         with:
@@ -57,7 +53,6 @@ jobs:
           alias: ${{ secrets.KEY_ALIAS }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
 
-      # Uloženie hotového .aab súboru ako artefaktu na stiahnutie
       - name: Upload Signed AAB
         uses: actions/upload-artifact@v4
         with:
