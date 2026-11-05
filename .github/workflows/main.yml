@@ -21,6 +21,12 @@ jobs:
         with:
           node-version: 20
 
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
       - name: Generate package-lock.json
         run: |
           npm install --package-lock-only --legacy-peer-deps
@@ -55,7 +61,7 @@ jobs:
           sed -i 's/versionCode [0-9]*/versionCode 3/g' android/app/build.gradle
           sed -i 's/versionName "[^"]*"/versionName "1.0.1"/g' android/app/build.gradle
 
-          # Potlačenie varovaní o verzii Android Gradle Pluginu pre API 36
+          # Potlačenie varovaní pre AGP a API 36
           echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
 
           npx cap sync android
