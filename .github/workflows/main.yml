@@ -52,45 +52,45 @@ jobs:
             npx cap add android
           fi
 
-          # Nastavenie min SDK 24 a target/compile SDK 36
+          # Nastavenie verzií SDK a verzie aplikácie (1.0.1, kód 3)
           sed -i 's/minSdkVersion = [0-9]*/minSdkVersion = 24/g' android/variables.gradle
           sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 36/g' android/variables.gradle
           sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 36/g' android/variables.gradle
-
-          # Nastavenie versionCode 3 a verzie 1.0.1
           sed -i 's/versionCode [0-9]*/versionCode 3/g' android/app/build.gradle
           sed -i 's/versionName "[^"]*"/versionName "1.0.1"/g' android/app/build.gradle
-
-          # Potlačenie varovaní pre AGP a API 36
           echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
 
           npx cap sync android
 
-      - name: Build Android App Bundle (.aab)
+      - name: Configure Keystore and Gradle Signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          # 1. Bezpečné binárne dekódovanie kľúča priamo do android/app/
+          node -e 'fs.writeFileSync("android/app/release.keystore", Buffer.from(process.env.KEYSTORE_BASE64, "base64"))'
+
+          # 2. Nastavenie natívneho podpisovania priamo v build.gradle bez použitia jarsigner
+          sed -i '/buildTypes {/i \
+              signingConfigs { \
+                  release { \
+                      storeFile file("release.keystore") \
+                      storePassword "X5o9bGziMf" \
+                      keyAlias "msglitchapps" \
+                      keyPassword "X5o9bGziMf" \
+                  } \
+              }' android/app/build.gradle
+
+          sed -i 's/buildTypes {/buildTypes {\n        release {\n            signingConfig signingConfigs.release/g' android/app/build.gradle
+
+      - name: Build Signed Android App Bundle (.aab)
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew bundleRelease
 
-      - name: Sign Android App Bundle via Secrets
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: Cleanup Keystore
         run: |
-          # Dekódovanie keystore zo secretu
-          echo "$KEYSTORE_BASE64" | base64 --decode > temp_release.keystore
-
-          # Podpísanie vygenerovaného balíka
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore temp_release.keystore \
-            -storepass "$KEYSTORE_PASSWORD" \
-            -keypass "$KEY_PASSWORD" \
-            android/app/build/outputs/bundle/release/app-release.aab "$KEY_ALIAS"
-
-          # Bezpečné odstránenie dočasného kľúča
-          rm -f temp_release.keystore
+          rm -f android/app/release.keystore
 
       - name: Upload Signed AAB
         uses: actions/upload-artifact@v4
