@@ -847,7 +847,7 @@ export default function App() {
           title="Kliknite pre zobrazenie noviniek a histórie verzií"
         >
           <span className="font-medium text-white/60 group-hover:text-amber-200">Toddler sleep assistant</span>
-          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-white/10 group-hover:bg-amber-400 group-hover:text-slate-950 text-amber-300 transition-all">v1.0</span>
+          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-white/10 group-hover:bg-amber-400 group-hover:text-slate-950 text-amber-300 transition-all">v1.0.1</span>
         </button>
 
         <button

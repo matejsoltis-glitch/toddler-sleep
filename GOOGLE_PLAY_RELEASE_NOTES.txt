@@ -1,0 +1,128 @@
+================================================================================
+POZNÁMKY K VYDANIU PRE GOOGLE PLAY CONSOLE (RELEASE NOTES)
+Aplikácia: Toddler Sleep Assistant
+Verzia: v1.0.1 (versionCode: 2, versionName: "1.0.1")
+================================================================================
+
+Tento súbor obsahuje pripravené texty noviniek (What's new in this release)
+vo formáte presne podľa požiadaviek Google Play Console (maximálne 500 znakov na jazyk).
+
+Môžete použiť:
+MOŽNOSŤ A: Skopírovať celú sekciu s XML tagmi <sk-SK>, <en-US> atď. priamo do poľa.
+MOŽNOSŤ B: Skopírovať čistý text pre jednotlivé jazyky v konzole.
+
+--------------------------------------------------------------------------------
+MOŽNOSŤ A: FORMÁT S JAZYKOVÝMI ZNAČKAMI PRE GOOGLE PLAY CONSOLE (v1.0.1)
+(Skopírujte celý blok nižšie priamo do poľa "Poznámky k vydaniu")
+--------------------------------------------------------------------------------
+
+<sk-SK>
+Verzia 1.0.1:
+• Oprava úvodnej obrazovky výberu jazyka: kompaktné rozloženie bez nutnosti scrollovania
+• Potvrdzovacie tlačidlo je bezpečne umiestnené nad systémovými tlačidlami Androidu
+• Vylepšená citlivosť ovládania a plynulosť prostredia
+</sk-SK>
+<cs-CZ>
+Verze 1.0.1:
+• Oprava úvodní obrazovky výběru jazyka: kompaktní rozložení bez nutnosti scrolování
+• Potvrzovací tlačítko je bezpečně umístěno nad systémovými tlačítky Androidu
+• Vylepšená citlivost ovládání a plynulost prostředí
+</cs-CZ>
+<en-US>
+Version 1.0.1:
+• Fixed language selection screen: compact responsive layout fitting without scrolling
+• Confirmation button is positioned safely above Android system navigation buttons
+• Smooth UI performance and touch optimizations
+</en-US>
+<pl-PL>
+Wersja 1.0.1:
+• Poprawa ekranu wyboru języka: kompaktowy układ bez konieczności przewijania
+• Przycisk potwierdzenia umieszczony bezpiecznie nad przyciskami systemowymi Androida
+• Lepsza responsywność i płynność interfejsu
+</pl-PL>
+<hu-HU>
+1.0.1-es verzió:
+• Nyelvválasztó képernyő javítása: kompakt elrendezés görgetés nélkül
+• A megerősítő gomb biztonságosan az Android navigációs gombok felett helyezkedik el
+• Finomhangolt érintésvezérlés és kezelőfelület
+</hu-HU>
+<uk-UA>
+Версія 1.0.1:
+• Виправлено екран вибору мови: компактний вигляд без потреби прокручування
+• Кнопка підтвердження безпечно розташована над системними кнопками Android
+• Покращена чутливість керування та плавність інтерфейсу
+</uk-UA>
+<it-IT>
+Versione 1.0.1:
+• Correzione della schermata di selezione lingua: layout compatto senza scorrimento
+• Pulsante di conferma posizionato in sicurezza sopra i pulsanti di sistema Android
+• Ottimizzazioni della risposta al tocco e interfaccia fluida
+</it-IT>
+
+--------------------------------------------------------------------------------
+MOŽNOSŤ B: ČISTÉ TEXTY PRE JEDNOTLIVÉ JAZYKY (KOPÍROVAŤ ZVLÁŠŤ) (v1.0.1)
+--------------------------------------------------------------------------------
+
+[SLOVENČINA (sk-SK)]
+Verzia 1.0.1:
+• Oprava úvodnej obrazovky výberu jazyka: kompaktné rozloženie bez nutnosti scrollovania
+• Potvrdzovacie tlačidlo je bezpečne umiestnené nad systémovými tlačidlami Androidu
+• Vylepšená citlivosť ovládania a plynulosť prostredia
+
+[ČEŠTINA (cs-CZ)]
+Verze 1.0.1:
+• Oprava úvodní obrazovky výběru jazyka: kompaktní rozložení bez nutnosti scrolování
+• Potvrzovací tlačítko je bezpečně umístěno nad systémovými tlačítky Androidu
+• Vylepšená citlivost ovládání a plynulost prostředí
+
+[ENGLISH (en-US)]
+Version 1.0.1:
+• Fixed language selection screen: compact responsive layout fitting without scrolling
+• Confirmation button is positioned safely above Android system navigation buttons
+• Smooth UI performance and touch optimizations
+
+[POLSKI (pl-PL)]
+Wersja 1.0.1:
+• Poprawa ekranu wyboru języka: kompaktowy układ bez konieczności przewijania
+• Przycisk potwierdzenia umieszczony bezpiecznie nad przyciskami systemowymi Androida
+• Lepsza responsywność i płynność interfejsu
+
+[MAGYAR (hu-HU)]
+1.0.1-es verzió:
+• Nyelvválasztó képernyő javítása: kompakt elrendezés görgetés nélkül
+• A megerősítő gomb biztonságosan az Android navigációs gombok felett helyezkedik el
+• Finomhangolt érintésvezérlés és kezelőfelület
+
+[UKRAINIAN (uk-UA)]
+Версія 1.0.1:
+• Виправлено екран вибору мови: компактний вигляд без потреби прокручування
+• Кнопка підтвердження безпечно розташована над системними кнопками Android
+• Покращена чутливість керування та плавність інтерфейсу
+
+[ITALIANO (it-IT)]
+Versione 1.0.1:
+• Correzione della schermata di selezione lingua: layout compatto senza scorrimento
+• Pulsante di conferma posizionato in sicurezza sopra i pulsanti di sistema Android
+• Ottimizzazioni della risposta al tocco e interfaccia fluida
+
+================================================================================
+HISTORICKÝ ARCHÍV: VERZIA v1.0 (versionCode: 1, versionName: "1.0")
+================================================================================
+<sk-SK>
+Oficiálna verzia 1.0!
+• Nový režim Cirkadiálneho spektra pre prirodzený spánok bábätiek
+• Vlastný výber farieb s interaktívnym farebným kolieskom
+• Plynulé a jemné prelínanie farieb príjemné pre detské oči
+• O 30% kompaktnejšie ovládanie hlasitosti, jasu a priehľadnosti
+• Časovač s postupným stlmením a interaktívna história spánku
+• Kompletná lokalizácia do 7 jazykov
+</sk-SK>
+<en-US>
+Official Version 1.0 Release!
+• Science-backed Circadian Spectrum lighting with zero melatonin suppression
+• Custom color spectrum with interactive color wheel
+• Gentle, continuous color transitions for sensitive eyes
+• Compact sliders for volume, brightness, and opacity
+• Sleep timer with gradual fade-out and interactive nap history
+• Complete 7-language localization
+</en-US>

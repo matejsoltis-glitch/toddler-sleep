@@ -18,8 +18,41 @@ interface ReleaseEntry {
 
 const RELEASES: ReleaseEntry[] = [
   {
-    version: 'v1.0',
+    version: 'v1.0.1',
     isLatest: true,
+    highlights: {
+      sk: [
+        'Oprava obrazovky výberu jazyka: nové kompaktné rozloženie bez nutnosti scrollovania.',
+        'Potvrdzovacie tlačidlo umiestnené bezpečne nad systémovými tlačidlami Androidu (s ochranou safe-area insets).',
+      ],
+      cs: [
+        'Oprava obrazovky výběru jazyka: kompaktní rozložení bez nutnosti scrollování.',
+        'Potvrzovací tlačítko umístěno bezpečně nad systémovými tlačítky Androidu.',
+      ],
+      en: [
+        'Language onboarding screen fix: compact responsive layout fitting comfortably without scrolling.',
+        'Continue button safely elevated above Android 3-button system navigation bars (with safe-area insets).',
+      ],
+      pl: [
+        'Poprawa ekranu wyboru języka: kompaktowy układ bez konieczności przewijania.',
+        'Przycisk potwierdzenia umieszczony bezpiecznie nad przyciskami systemowymi Androida.',
+      ],
+      hu: [
+        'Nyelvválasztó képernyő javítása: kompakt elrendezés görgetés nélkül.',
+        'A megerősítő gomb biztonságosan az Android rendszergombok felett helyezkedik el.',
+      ],
+      uk: [
+        'Виправлення екрана вибору мови: компактний вигляд без необхідності скролити.',
+        'Кнопка підтвердження розташована безпечно над системними кнопками Android.',
+      ],
+      it: [
+        'Correzione schermata di selezione della lingua: layout compatto senza scorrimento.',
+        'Pulsante di conferma posizionato in modo sicuro sopra i tasti di sistema Android.',
+      ],
+    },
+  },
+  {
+    version: 'v1.0',
     highlights: {
       sk: [
         'Oficiálna stabilná verzia v1.0!',
@@ -224,7 +257,7 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
                 {t.changelogModal?.title || 'História verzií a novinky'}
               </h2>
               <span className="text-[11px] text-amber-300/80 font-mono">
-                Aktuálna verzia: v1.0
+                Aktuálna verzia: v1.0.1
               </span>
             </div>
           </div>

@@ -5,10 +5,15 @@ A calming sleep companion app for babies and toddlers featuring soothing multi-s
 ---
 ## Version History & Changelog
 
-### v1.0 (Latest)
+### v1.0.1 (Latest)
+- **Language Onboarding Layout & Safe-Area Fix**: Redesigned the language selection onboarding modal into an ergonomic 2-column responsive grid that fits 100% within the viewport without requiring users to scroll.
+- **Android System Navigation Clearance**: Positioned the "Continue to Application" confirmation button safely above Android 3-button system navigation bars (Back, Home, Recents) with robust `safe-area-inset-bottom` padding, resolving tap blockage on all Android device screen sizes.
+- **In-App & Store Release Synchronization**: Synchronized version v1.0.1 across the interactive in-app changelog, `package.json`, Android workflow build configurations, and Google Play Console release notes.
+
+### v1.0
 - **Refined Mobile Layout Geometry**: Halved footer height (`py-1.5`) for a minimalist bottom bar, established an exact 2mm spacing between the sleep timer module and the footer, and trimmed 2mm from the top header padding (`pt-[6mm]`) for optimal screen utilization.
 - **Complete Main Menu Button Localization**: Fully localized the "Back to main menu" navigation button, tooltips, and aria-labels across Slovak, Czech, English, Polish, Hungarian, Ukrainian, and Italian.
-- **Interactive In-App Changelog Modal**: Tapping the version badge (`v1.0`) in the footer opens an interactive, scrollable modal displaying the complete version history, release notes, and latest features.
+- **Interactive In-App Changelog Modal**: Tapping the version badge (`v1.0.1`) in the footer opens an interactive, scrollable modal displaying the complete version history, release notes, and latest features.
 - **Author Notice & Feedback Modal**: Tapping the author's name ("Autor: Matej Šoltis") displays a localized message for parents with direct email feedback contact (`msglitchapps@gmail.com`) and one-tap copy functionality.
 - **Official v1.0 Android Release Configuration**: Synchronized version 1.0 across `package.json`, root `capacitor.config.json`, and the GitHub Actions Android build workflow (`versionName "1.0"` / `versionCode 1`).
 
