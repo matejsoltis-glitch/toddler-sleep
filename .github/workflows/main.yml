@@ -54,7 +54,7 @@ jobs:
           sed -i 's/versionCode [0-9]*/versionCode 3/g' android/app/build.gradle
           sed -i 's/versionName ".*"/versionName "1.0.1"/g' android/app/build.gradle
 
-          # Zmena distribúcie na -bin namiesto -all pre menšie a spoľahlivejšie sťahovanie
+          # Zmena distribúcie na -bin namiesto -all pre spoľahlivé sťahovanie
           if [ -f "android/gradle/wrapper/gradle-wrapper.properties" ]; then
             sed -i 's/-all.zip/-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties
           fi
@@ -72,38 +72,25 @@ jobs:
         with:
           gradle-version: 8.11.1
 
-      - name: Prepare Keystore
-        run: |
-          keytool -genkeypair -v \
-            -keystore android/app/release.keystore \
-            -alias msglitchapps \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass "X5o9bGziMf" \
-            -keypass "X5o9bGziMf" \
-            -dname "CN=ToddlerSleep, OU=App, O=MSGlitch, L=Kostolna, ST=Slovakia, C=SK"
-
       - name: Build Android App Bundle (.aab)
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew bundleRelease --no-daemon
 
-      - name: Sign Android App Bundle
-        run: |
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore android/app/release.keystore \
-            -storepass "X5o9bGziMf" \
-            -keypass "X5o9bGziMf" \
-            -signedjar android/app/build/outputs/bundle/release/app-release-signed.aab \
-            android/app/build/outputs/bundle/release/app-release.aab msglitchapps
+      - name: Sign Android Release AAB
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: android/app/build/outputs/bundle/release
+          signingKey: ${{ secrets.KEYSTORE_BASE64 }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Upload Signed AAB and Keystore
+      - name: Upload Signed AAB
         uses: actions/upload-artifact@v4
         with:
           name: app-release-1.0.1-b3
-          path: |
-            android/app/build/outputs/bundle/release/app-release-signed.aab
-            android/app/release.keystore
+          path: ${{ steps.sign_app.outputs.signedReleaseFile }}
           retention-days: 7
