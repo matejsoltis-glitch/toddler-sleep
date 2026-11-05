@@ -3,6 +3,7 @@ import { Moon, Sun, ShieldAlert, Settings, ArrowLeft } from 'lucide-react';
 import { NightModeState, Language, AppMode } from '../types';
 import { translations } from '../i18n/translations';
 import { BatteryIndicator } from './BatteryIndicator';
+import { triggerHaptic } from '../utils/haptics';
 
 interface ClockHeaderProps {
   language: Language;
@@ -24,6 +25,7 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
   activeMode,
   onBackToMenu,
   nightMode,
+  onToggleNightMode,
   isTouchLocked,
   onToggleTouchLock,
   isPlaying,
@@ -31,6 +33,7 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
   onOpenSettings,
 }) => {
   const t = translations[language];
+  const isDarkMode = nightMode.forceDark || (nightMode.isAutoSunset && nightMode.isAfterSunset);
 
   const formatTimer = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -55,19 +58,31 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
               <span>{t.mainMenuButton}</span>
             </button>
           ) : (
-            <div className="flex items-center gap-1.5 text-xs text-white/70">
-              {nightMode.isAfterSunset ? (
-                <span className="flex items-center gap-1.5 text-amber-300/90 font-medium">
-                  <Moon className="w-3.5 h-3.5 text-amber-300" />
-                  <span>{t.sunsetActive}</span>
-                </span>
+            <button
+              onClick={() => {
+                triggerHaptic(8);
+                onToggleNightMode();
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all active:scale-95 touch-manipulation border cursor-pointer ${
+                isDarkMode
+                  ? 'bg-amber-400/20 border-amber-400/40 text-amber-300 shadow-sm'
+                  : 'bg-white/10 hover:bg-white/15 border-white/15 text-white/90'
+              }`}
+              title={isDarkMode ? `${t.dayActive} (kliknite pre prepnutie)` : `${t.nightMode} (kliknite pre prepnutie)`}
+              aria-label={isDarkMode ? t.nightMode : t.dayActive}
+            >
+              {isDarkMode ? (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-amber-300 fill-amber-300/30" />
+                  <span>{nightMode.isAutoSunset ? t.sunsetActive : t.nightMode}</span>
+                </>
               ) : (
-                <span className="flex items-center gap-1.5 text-amber-100/70 font-medium">
-                  <Sun className="w-3.5 h-3.5 text-amber-200" />
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-300" />
                   <span>{t.dayActive}</span>
-                </span>
+                </>
               )}
-            </div>
+            </button>
           )}
 
           {/* Active timer placed elegantly underneath left label, away from camera cutouts */}

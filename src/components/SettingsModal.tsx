@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Globe, Moon, Sun, Flame, Eye, ChevronDown, Smartphone } from 'lucide-react';
+import { X, Globe, Moon, Sun, Flame, Eye, ChevronDown } from 'lucide-react';
 import { Language, NightModeState } from '../types';
 import { translations } from '../i18n/translations';
 import { triggerHaptic } from '../utils/haptics';
@@ -11,8 +11,8 @@ interface SettingsModalProps {
   onSelectLanguage: (lang: Language) => void;
   nightMode: NightModeState;
   onUpdateNightMode: (updates: Partial<NightModeState>) => void;
-  hapticsEnabled: boolean;
-  onToggleHaptics: (enabled: boolean) => void;
+  hapticsEnabled?: boolean;
+  onToggleHaptics?: (enabled: boolean) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -22,59 +22,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSelectLanguage,
   nightMode,
   onUpdateNightMode,
-  hapticsEnabled,
-  onToggleHaptics,
 }) => {
   if (!isOpen) return null;
 
   const t = translations[language];
 
-  const hapticLabels: Record<Language, { title: string; desc: string; on: string; off: string }> = {
-    sk: {
-      title: 'Haptická odozva (vibrácie)',
-      desc: 'Jemné potvrdenie dotyku pri stlačení tlačidiel a kariet módov.',
-      on: 'ZAPNUTÁ',
-      off: 'VYPNUTÁ',
-    },
-    cs: {
-      title: 'Haptická odezva (vibrace)',
-      desc: 'Jemné potvrzení dotyku při stisku tlačítek a karet módů.',
-      on: 'ZAPNUTO',
-      off: 'VYPNUTO',
-    },
-    en: {
-      title: 'Haptic Feedback (Vibration)',
-      desc: 'Gentle touch confirmation when tapping buttons and mode cards.',
-      on: 'ON',
-      off: 'OFF',
-    },
-    pl: {
-      title: 'Wibracje i haptyka',
-      desc: 'Delikatne potwierdzenie dotyku przycisków i kart trybów.',
-      on: 'WŁĄCZONE',
-      off: 'WYŁĄCZONE',
-    },
-    hu: {
-      title: 'Haptikus visszajelzés (rezgés)',
-      desc: 'Finom rezgés gombok és üzemmódkártyák érintésekor.',
-      on: 'BE',
-      off: 'KI',
-    },
-    uk: {
-      title: 'Тактильний відгук (вібрація)',
-      desc: 'Легка вібрація при натисканні на кнопки та картки режимів.',
-      on: 'УВІМКНЕНО',
-      off: 'ВИМКНЕНО',
-    },
-    it: {
-      title: 'Feedback aptico (vibrazione)',
-      desc: 'Leggera vibrazione al tocco di pulsanti e schede modalità.',
-      on: 'ATTIVO',
-      off: 'DISATTIVO',
-    },
+  const stateLabels: Record<Language, { on: string; off: string }> = {
+    sk: { on: 'ZAPNUTÝ', off: 'VYPNUTÝ' },
+    cs: { on: 'ZAPNUTO', off: 'VYPNUTO' },
+    en: { on: 'ON', off: 'OFF' },
+    pl: { on: 'WŁĄCZONY', off: 'WYŁĄCZONY' },
+    hu: { on: 'BE', off: 'KI' },
+    uk: { on: 'УВІМКНЕНО', off: 'ВИМКНЕНО' },
+    it: { on: 'ATTIVO', off: 'DISATTIVO' },
   };
+  const toggleLabel = stateLabels[language] || stateLabels.en;
 
-  const hapticText = hapticLabels[language] || hapticLabels.en;
+
 
   return (
     <div
@@ -110,12 +74,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* 1. Language Personalization via simplified dropdown menu */}
         <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 flex flex-col gap-2.5">
-          <label htmlFor="language-dropdown" className="flex items-center justify-between text-xs font-semibold text-white/80">
-            <span className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-amber-300" />
-              <span>{t.selectLanguage}</span>
-            </span>
-            <span className="text-white/40 text-[11px] font-normal">7 jazykov / 7 languages</span>
+          <label htmlFor="language-dropdown" className="flex items-center gap-2 text-xs font-semibold text-white/80">
+            <Globe className="w-4 h-4 text-amber-300" />
+            <span>{t.selectLanguage}</span>
           </label>
 
           <div className="relative w-full">
@@ -150,43 +111,72 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
             <span
               className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium ${
-                nightMode.isAfterSunset
+                nightMode.forceDark || (nightMode.isAutoSunset && nightMode.isAfterSunset)
                   ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
                   : 'bg-white/10 text-white/60'
               }`}
             >
-              {nightMode.isAfterSunset
-                ? t.nightSettingsModal.currentSunset
+              {nightMode.forceDark || (nightMode.isAutoSunset && nightMode.isAfterSunset)
+                ? (nightMode.isAutoSunset ? t.nightSettingsModal.currentSunset : t.nightModeActive)
                 : t.nightSettingsModal.currentDay}
             </span>
           </div>
 
-          <p className="text-xs text-white/60">
-            {t.nightSettingsModal.sunsetDesc}
+          <p className="text-xs text-white/60 leading-relaxed">
+            {language === 'sk'
+              ? 'Nočný režim automaticky zníži jas (25%) a stlmí priehľadnosť prvkov (35%), aby svetlo neoslňovalo dieťatko v izbe. Denný režim vráti plný jas (85%) a 100% kontrast.'
+              : language === 'cs'
+              ? 'Noční režim automaticky sníží jas (25%) a ztlumí průhlednost prvků (35%), aby světlo neoslňovalo miminko. Denní režim vrátí plný jas (85%) a 100% kontrast.'
+              : language === 'pl'
+              ? 'Tryb nocny automatycznie zmniejsza jasność (25%) i przezroczystość (35%), chroniąc wzrok dziecka w ciemnym pokoju.'
+              : language === 'hu'
+              ? 'Az éjszakai mód automatikusan 25%-ra csökkenti a fényerőt és 35%-ra az átlátszóságot a nyugodt alvásért.'
+              : language === 'uk'
+              ? 'Нічний режим автоматично знижує яскравість (25%) та прозорість (35%), щоб світло не заважало дитині спати.'
+              : language === 'it'
+              ? 'La modalità notte riduce automaticamente luminosità (25%) e trasparenza (35%) per non abbagliare il bambino.'
+              : 'Night mode automatically dims brightness (25%) and softens components opacity (35%) for undisturbed sleep.'}
           </p>
 
-          <div className="grid grid-cols-2 gap-2 mt-1">
+          <div className="grid grid-cols-3 gap-2 mt-1">
             <button
-              onClick={() => onUpdateNightMode({ isAutoSunset: true, forceDark: false })}
-              className={`py-2.5 px-2 rounded-xl text-xs font-semibold transition-all touch-manipulation text-center ${
-                nightMode.isAutoSunset && !nightMode.forceDark
+              onClick={() => {
+                triggerHaptic(8);
+                onUpdateNightMode({ isAutoSunset: false, forceDark: false });
+              }}
+              className={`py-2.5 px-1.5 rounded-xl text-xs font-semibold transition-all touch-manipulation text-center ${
+                !nightMode.forceDark && !nightMode.isAutoSunset
+                  ? 'bg-amber-400 text-slate-950 shadow-md font-bold'
+                  : 'bg-white/5 hover:bg-white/10 text-white/70 border border-white/10'
+              }`}
+            >
+              {t.dayActive}
+            </button>
+            <button
+              onClick={() => {
+                triggerHaptic(8);
+                onUpdateNightMode({ isAutoSunset: false, forceDark: true });
+              }}
+              className={`py-2.5 px-1.5 rounded-xl text-xs font-semibold transition-all touch-manipulation text-center ${
+                nightMode.forceDark && !nightMode.isAutoSunset
+                  ? 'bg-amber-400 text-slate-950 shadow-md font-bold'
+                  : 'bg-white/5 hover:bg-white/10 text-white/70 border border-white/10'
+              }`}
+            >
+              {t.nightMode}
+            </button>
+            <button
+              onClick={() => {
+                triggerHaptic(8);
+                onUpdateNightMode({ isAutoSunset: true, forceDark: false });
+              }}
+              className={`py-2.5 px-1.5 rounded-xl text-xs font-semibold transition-all touch-manipulation text-center ${
+                nightMode.isAutoSunset
                   ? 'bg-amber-400 text-slate-950 shadow-md font-bold'
                   : 'bg-white/5 hover:bg-white/10 text-white/70 border border-white/10'
               }`}
             >
               {t.nightSettingsModal.autoSunsetBtn}
-            </button>
-            <button
-              onClick={() =>
-                onUpdateNightMode({ isAutoSunset: false, forceDark: !nightMode.forceDark })
-              }
-              className={`py-2.5 px-2 rounded-xl text-xs font-semibold transition-all touch-manipulation text-center ${
-                nightMode.forceDark
-                  ? 'bg-amber-400 text-slate-950 shadow-md font-bold'
-                  : 'bg-white/5 hover:bg-white/10 text-white/70 border border-white/10'
-              }`}
-            >
-              {t.nightSettingsModal.forceNightBtn}
             </button>
           </div>
         </div>
@@ -208,7 +198,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   : 'bg-white/10 text-white/70'
               }`}
             >
-              {nightMode.redFilter ? hapticText.on : hapticText.off}
+              {nightMode.redFilter ? toggleLabel.on : toggleLabel.off}
             </button>
           </div>
           <p className="text-xs text-white/60">
@@ -249,34 +239,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
 
-        {/* 5. Haptic Feedback (Vibration) Toggle */}
-        <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Smartphone className="w-4 h-4 text-emerald-300" />
-              <span className="text-sm font-medium text-white">
-                {hapticText.title}
-              </span>
-            </div>
-            <button
-              onClick={() => {
-                const next = !hapticsEnabled;
-                if (next) triggerHaptic(14);
-                onToggleHaptics(next);
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all touch-manipulation ${
-                hapticsEnabled
-                  ? 'bg-emerald-500 text-slate-950 font-bold shadow-md ring-2 ring-emerald-400/40'
-                  : 'bg-white/10 text-white/70'
-              }`}
-            >
-              {hapticsEnabled ? hapticText.on : hapticText.off}
-            </button>
-          </div>
-          <p className="text-xs text-white/60">
-            {hapticText.desc}
-          </p>
-        </div>
+
 
         {/* Save & Close Button */}
         <button

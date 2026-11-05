@@ -3,6 +3,19 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+// One-time reset to initial onboarding screen as requested
+try {
+  const RESET_KEY = 'toddler_onboarding_preview_reset_turn4';
+  if (!localStorage.getItem(RESET_KEY)) {
+    localStorage.removeItem('toddler_lang_configured');
+    localStorage.removeItem('toddler_lang');
+    localStorage.setItem(RESET_KEY, '1');
+  }
+} catch {
+  // ignore
+}
+
+
 interface Props {
   children: ReactNode;
 }

@@ -150,7 +150,37 @@ export default function App() {
   };
 
   const [lightSpeed, setLightSpeed] = useState<LightSpeed>('slow');
-  const [brightness, setBrightness] = useState<number>(80);
+  const [brightness, setBrightness] = useState<number>(() => {
+    try {
+      const savedNightMode = localStorage.getItem('toddler_night_mode');
+      if (savedNightMode) {
+        const parsed = JSON.parse(savedNightMode);
+        const hour = new Date().getHours();
+        const isDark = parsed.forceDark || (parsed.isAutoSunset && (hour >= 18 || hour < 7));
+        if (isDark) {
+          const savedNightB = Number(localStorage.getItem('toddler_night_brightness'));
+          return Number.isFinite(savedNightB) && savedNightB >= 10 && savedNightB <= 100 ? savedNightB : 25;
+        }
+      }
+      const savedDayB = Number(localStorage.getItem('toddler_day_brightness'));
+      if (Number.isFinite(savedDayB) && savedDayB >= 10 && savedDayB <= 100) return savedDayB;
+    } catch {}
+    return 80;
+  });
+
+  const handleUpdateBrightness = (val: number) => {
+    const num = Math.max(10, Math.min(100, Math.round(val)));
+    setBrightness(num);
+    try {
+      const hour = new Date().getHours();
+      const isDark = nightMode.forceDark || (nightMode.isAutoSunset && (hour >= 18 || hour < 7));
+      if (isDark) {
+        localStorage.setItem('toddler_night_brightness', num.toString());
+      } else {
+        localStorage.setItem('toddler_day_brightness', num.toString());
+      }
+    } catch {}
+  };
   const [isFullScreenLamp, setIsFullScreenLamp] = useState<boolean>(false);
   const [lightColorIndex, setLightColorIndex] = useState<number>(0);
 
@@ -215,26 +245,73 @@ export default function App() {
     try {
       const saved = localStorage.getItem('toddler_night_mode');
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return {
+          ...parsed,
+          isAfterSunset: checkAfterSunset(),
+        };
       }
     } catch {
       // ignore
     }
     return {
-      isAutoSunset: false, // Default is OFF so eye-saving / night mode NEVER turns on unexpectedly
-      isAfterSunset: false,
+      isAutoSunset: false,
+      isAfterSunset: checkAfterSunset(),
       forceDark: false,
       redFilter: false,
       screenDimPercent: 0,
     };
   });
 
+  // Apply Day or Night ergonomic presets (adjusts brightness & opacity for infant sleep science)
+  const applyNightPreset = () => {
+    let nightB = 25;
+    let nightO = 35;
+    try {
+      const savedB = Number(localStorage.getItem('toddler_night_brightness'));
+      if (Number.isFinite(savedB) && savedB >= 10 && savedB <= 100) nightB = savedB;
+      const savedO = Number(localStorage.getItem('toddler_night_opacity'));
+      if (Number.isFinite(savedO) && savedO >= 5 && savedO <= 100) nightO = savedO;
+    } catch {}
+    setBrightness(nightB);
+    setComponentsOpacity(nightO);
+    try {
+      localStorage.setItem('toddler_components_opacity', nightO.toString());
+    } catch {}
+  };
+
+  const applyDayPreset = () => {
+    let dayB = 85;
+    let dayO = 100;
+    try {
+      const savedB = Number(localStorage.getItem('toddler_day_brightness'));
+      if (Number.isFinite(savedB) && savedB >= 10 && savedB <= 100) dayB = savedB;
+      const savedO = Number(localStorage.getItem('toddler_day_opacity'));
+      if (Number.isFinite(savedO) && savedO >= 5 && savedO <= 100) dayO = savedO;
+    } catch {}
+    setBrightness(dayB);
+    setComponentsOpacity(dayO);
+    try {
+      localStorage.setItem('toddler_components_opacity', dayO.toString());
+    } catch {}
+  };
+
   const handleUpdateNightMode = (updates: Partial<NightModeState>) => {
     setNightMode((prev) => {
       const next = { ...prev, ...updates };
-      if (updates.isAutoSunset) {
+      if (updates.isAutoSunset !== undefined) {
         next.isAfterSunset = checkAfterSunset();
       }
+
+      const wasDark = prev.forceDark || (prev.isAutoSunset && prev.isAfterSunset);
+      const willBeDark = next.forceDark || (next.isAutoSunset && next.isAfterSunset);
+
+      if (!wasDark && willBeDark) {
+        applyNightPreset();
+      } else if (wasDark && !willBeDark) {
+        applyDayPreset();
+      }
+
       try {
         localStorage.setItem('toddler_night_mode', JSON.stringify(next));
       } catch {
@@ -260,7 +337,15 @@ export default function App() {
       setNightMode((prev) => {
         if (!prev.isAutoSunset) return prev;
         const isSunset = checkAfterSunset();
-        return { ...prev, isAfterSunset: isSunset };
+        if (prev.isAfterSunset !== isSunset) {
+          if (isSunset) {
+            applyNightPreset();
+          } else {
+            applyDayPreset();
+          }
+          return { ...prev, isAfterSunset: isSunset };
+        }
+        return prev;
       });
     }, 60000);
     return () => clearInterval(interval);
@@ -595,7 +680,7 @@ export default function App() {
       {/* Master Application Brightness Dimmer - Controls overall screen brightness */}
       {brightness < 100 && (
         <div
-          className="pointer-events-none fixed inset-0 z-40 bg-black transition-opacity duration-150 ease-out"
+          className="pointer-events-none fixed inset-0 z-40 bg-black transition-opacity duration-500 ease-in-out"
           style={{ opacity: Math.max(0, Math.min(0.85, ((100 - brightness) / 100) * 0.82)) }}
           aria-hidden="true"
         />
@@ -686,12 +771,10 @@ export default function App() {
         onSelectLanguage={handleSelectLanguage}
         nightMode={nightMode}
         onUpdateNightMode={handleUpdateNightMode}
-        hapticsEnabled={hapticsEnabled}
-        onToggleHaptics={handleToggleHaptics}
       />
 
       {/* Permanent Header with app title, back button, lock, and settings gear */}
-      <div style={{ opacity: safeOpacityRatio }} className="w-full transition-opacity duration-150">
+      <div style={{ opacity: safeOpacityRatio }} className="w-full transition-opacity duration-500 ease-in-out">
         <ClockHeader
           language={language}
           activeMode={activeMode}
@@ -700,9 +783,13 @@ export default function App() {
             setActiveMode('menu');
           }}
           nightMode={nightMode}
-          onToggleNightMode={() =>
-            handleUpdateNightMode({ forceDark: !nightMode.forceDark })
-          }
+          onToggleNightMode={() => {
+            const isCurrentlyDark = nightMode.forceDark || (nightMode.isAutoSunset && nightMode.isAfterSunset);
+            handleUpdateNightMode({
+              forceDark: !isCurrentlyDark,
+              isAutoSunset: false,
+            });
+          }}
           onToggleRedFilter={() =>
             handleUpdateNightMode({ redFilter: !nightMode.redFilter })
           }
@@ -724,7 +811,7 @@ export default function App() {
       {/* Mobile-tailored Main Container (pb-[2mm] ensures exact 2mm distance between last module and footer) */}
       <main
         style={{ opacity: safeOpacityRatio }}
-        className={`flex-1 w-full max-w-md mx-auto px-4 pt-3 pb-[2mm] flex flex-col gap-3 transition-opacity duration-150 ${
+        className={`flex-1 w-full max-w-md mx-auto px-4 pt-3 pb-[2mm] flex flex-col gap-3 transition-opacity duration-500 ease-in-out ${
           isFullScreenLamp ? 'invisible pointer-events-none' : ''
         }`}
       >
@@ -745,7 +832,7 @@ export default function App() {
               volume={volume}
               onChangeVolume={handleVolumeChange}
               brightness={brightness}
-              onChangeBrightness={setBrightness}
+              onChangeBrightness={handleUpdateBrightness}
               componentsOpacity={componentsOpacity}
               onChangeComponentsOpacity={handleUpdateComponentsOpacity}
             />
@@ -768,7 +855,7 @@ export default function App() {
               speed={lightSpeed}
               onSelectSpeed={setLightSpeed}
               brightness={brightness}
-              onChangeBrightness={setBrightness}
+              onChangeBrightness={handleUpdateBrightness}
               onOpenFullScreen={() => setIsFullScreenLamp(true)}
               colorIndex={lightColorIndex}
             />
@@ -834,7 +921,7 @@ export default function App() {
       {/* Subtle Mobile Bottom Status with Halved Height (py-1.5), Interactive Changelog and Author Notice */}
       <footer
         style={{ opacity: safeOpacityRatio }}
-        className={`w-full max-w-md mx-auto px-4 py-1.5 flex items-center justify-between text-[11px] text-white/40 border-t border-white/5 select-none transition-opacity duration-150 ${
+        className={`w-full max-w-md mx-auto px-4 py-1.5 flex items-center justify-between text-[11px] text-white/40 border-t border-white/5 select-none transition-opacity duration-500 ease-in-out ${
           isFullScreenLamp ? 'invisible pointer-events-none' : ''
         }`}
       >
