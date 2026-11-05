@@ -46,41 +46,55 @@ jobs:
       - name: Build web assets
         run: npm run build
 
-      - name: Add and Sync Android platform
+      - name: Add Android platform
         run: |
           if [ ! -d "android" ]; then
             npx cap add android
           fi
 
-          # Nastavenie verzií SDK a verzie aplikácie (1.0.1, kód 3)
-          sed -i 's/minSdkVersion = [0-9]*/minSdkVersion = 24/g' android/variables.gradle
-          sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 36/g' android/variables.gradle
-          sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 36/g' android/variables.gradle
-          sed -i 's/versionCode [0-9]*/versionCode 3/g' android/app/build.gradle
-          sed -i 's/versionName "[^"]*"/versionName "1.0.1"/g' android/app/build.gradle
-          echo "android.suppressUnsupportedCompileSdk=36" >> android/gradle.properties
-
-          npx cap sync android
-
-      - name: Configure Keystore and Gradle Signing
+      - name: Configure Android, Keystore and Signing
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          # 1. Bezpečné binárne dekódovanie kľúča priamo do android/app/
-          node -e 'fs.writeFileSync("android/app/release.keystore", Buffer.from(process.env.KEYSTORE_BASE64, "base64"))'
+          node -e '
+            const fs = require("fs");
 
-          # 2. Nastavenie natívneho podpisovania priamo v build.gradle bez použitia jarsigner
-          sed -i '/buildTypes {/i \
-              signingConfigs { \
-                  release { \
-                      storeFile file("release.keystore") \
-                      storePassword "X5o9bGziMf" \
-                      keyAlias "msglitchapps" \
-                      keyPassword "X5o9bGziMf" \
-                  } \
-              }' android/app/build.gradle
+            // 1. Bezpečné dekódovanie Keystore priamo do android/app/
+            const rawBase64 = (process.env.KEYSTORE_BASE64 || "").replace(/\s+/g, "");
+            fs.writeFileSync("android/app/release.keystore", Buffer.from(rawBase64, "base64"));
 
-          sed -i 's/buildTypes {/buildTypes {\n        release {\n            signingConfig signingConfigs.release/g' android/app/build.gradle
+            // 2. Nastavenie SDK verzií v variables.gradle
+            let vg = fs.readFileSync("android/variables.gradle", "utf8");
+            vg = vg.replace(/minSdkVersion\s*=\s*[0-9]+/g, "minSdkVersion = 24");
+            vg = vg.replace(/compileSdkVersion\s*=\s*[0-9]+/g, "compileSdkVersion = 36");
+            vg = vg.replace(/targetSdkVersion\s*=\s*[0-9]+/g, "targetSdkVersion = 36");
+            fs.writeFileSync("android/variables.gradle", vg);
+
+            // 3. Nastavenie verzie 1.0.1, versionCode 3 a natívneho podpisovania v build.gradle
+            let bg = fs.readFileSync("android/app/build.gradle", "utf8");
+            bg = bg.replace(/versionCode\s+[0-9]+/g, "versionCode 3");
+            bg = bg.replace(/versionName\s+"[^"]+"/g, "versionName \"1.0.1\"");
+
+            const signingBlock = `
+                signingConfigs {
+                    release {
+                        storeFile file("release.keystore")
+                        storePassword "X5o9bGziMf"
+                        keyAlias "msglitchapps"
+                        keyPassword "X5o9bGziMf"
+                    }
+                }
+            `;
+
+            bg = bg.replace("buildTypes {", signingBlock + "\n    buildTypes {");
+            bg = bg.replace(/release\s*\{/, "release {\n            signingConfig signingConfigs.release");
+            fs.writeFileSync("android/app/build.gradle", bg);
+
+            // 4. Potlačenie varovaní AGP pre SDK 36
+            fs.appendFileSync("android/gradle.properties", "\nandroid.suppressUnsupportedCompileSdk=36\n");
+          '
+
+          npx cap sync android
 
       - name: Build Signed Android App Bundle (.aab)
         working-directory: android
