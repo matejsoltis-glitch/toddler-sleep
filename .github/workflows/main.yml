@@ -59,7 +59,7 @@ jobs:
           node -e '
             const fs = require("fs");
 
-            // 1. Dekódovanie keystore do android/app/release.keystore
+            // 1. Dekódovanie keystore zo secretu
             const rawBase64 = (process.env.KEYSTORE_BASE64 || "").replace(/\s+/g, "");
             fs.writeFileSync("android/app/release.keystore", Buffer.from(rawBase64, "base64"));
 
@@ -92,23 +92,23 @@ jobs:
             -Pandroid.injected.signing.key.alias="msglitchapps" \
             -Pandroid.injected.signing.key.password="X5o9bGziMf"
 
+      - name: Export Upload Certificate from Secret
+        run: |
+          keytool -export -rfc \
+            -keystore android/app/release.keystore \
+            -alias msglitchapps \
+            -file upload_certificate.pem \
+            -storepass "X5o9bGziMf"
+
       - name: Cleanup Keystore
         run: |
           rm -f android/app/release.keystore
 
-      - name: Export Upload Certificate
-        run: |
-          keytool -export -rfc -keystore android/app/release.keystore -alias msglitchapps -file upload_certificate.pem -storepass "X5o9bGziMf"
-          
-      - name: Upload PEM Artifact
+      - name: Upload Artifacts (AAB and PEM Certificate)
         uses: actions/upload-artifact@v4
         with:
-          name: upload-pem
-          path: upload_certificate.pem
-
-      - name: Upload Signed AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release
-          path: android/app/build/outputs/bundle/release/*.aab
+          name: app-release-and-cert
+          path: |
+            android/app/build/outputs/bundle/release/*.aab
+            upload_certificate.pem
           retention-days: 7
