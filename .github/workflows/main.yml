@@ -96,6 +96,16 @@ jobs:
         run: |
           rm -f android/app/release.keystore
 
+      - name: Export Upload Certificate
+        run: |
+          keytool -export -rfc -keystore android/app/release.keystore -alias msglitchapps -file upload_certificate.pem -storepass "X5o9bGziMf"
+          
+      - name: Upload PEM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: upload-pem
+          path: upload_certificate.pem
+
       - name: Upload Signed AAB
         uses: actions/upload-artifact@v4
         with:
