@@ -78,19 +78,18 @@ jobs:
           chmod +x gradlew
           ./gradlew bundleRelease --no-daemon
 
-      - name: Sign Android Release AAB
-        uses: r0adkll/sign-android-release@v1
-        id: sign_app
-        with:
-          releaseDirectory: android/app/build/outputs/bundle/release
-          signingKey: ${{ secrets.KEYSTORE_BASE64 }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
+      - name: Sign Android App Bundle
+        run: |
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore android/app/release.keystore \
+            -storepass "${{ secrets.STORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEY_PASSWORD }}" \
+            -signedjar android/app/build/outputs/bundle/release/app-release-signed.aab \
+            android/app/build/outputs/bundle/release/app-release.aab "${{ secrets.KEY_ALIAS }}"
 
       - name: Upload Signed AAB
         uses: actions/upload-artifact@v4
         with:
           name: app-release-1.0.1-b3
-          path: ${{ steps.sign_app.outputs.signedReleaseFile }}
+          path: android/app/build/outputs/bundle/release/app-release-signed.aab
           retention-days: 7
