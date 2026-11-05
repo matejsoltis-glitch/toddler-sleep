@@ -45,19 +45,14 @@ jobs:
           if [ ! -d "android" ]; then
             npx cap add android
           fi
-          # Nastavenie min SDK 24 a target/compile SDK 36
+          # Nastavenie min SDK 24 a target/compile SDK 37
           sed -i 's/minSdkVersion = [0-9]*/minSdkVersion = 24/g' android/variables.gradle
-          sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 36/g' android/variables.gradle
-          sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 36/g' android/variables.gradle
+          sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 37/g' android/variables.gradle
+          sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 37/g' android/variables.gradle
           
-          # Zvýšenie čísla verzie na kód 3 a názov 1.0.1 pre Google Play
+          # Nastavenie verzie 1.0.1 a versionCode 3
           sed -i 's/versionCode [0-9]*/versionCode 3/g' android/app/build.gradle
-          sed -i 's/versionName ".*"/versionName "1.0.1"/g' android/app/build.gradle
-
-          # Zmena distribúcie na -bin namiesto -all pre spoľahlivé sťahovanie
-          if [ -f "android/gradle/wrapper/gradle-wrapper.properties" ]; then
-            sed -i 's/-all.zip/-bin.zip/g' android/gradle/wrapper/gradle-wrapper.properties
-          fi
+          sed -i 's/versionName "[^"]*"/versionName "1.0.1"/g' android/app/build.gradle
 
           npx cap sync android
 
@@ -66,30 +61,37 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '21'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: 8.11.1
+          cache: 'gradle'
 
       - name: Build Android App Bundle (.aab)
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew bundleRelease --no-daemon
+          ./gradlew bundleRelease
 
-      - name: Sign Android App Bundle
+      - name: Sign Android App Bundle via Secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          # Bezpečné dekódovanie keystore zo secretu do dočasného súboru
+          echo "$KEYSTORE_BASE64" | base64 --decode > temp_release.keystore
+
+          # Podpísanie vygenerovaného balíka
           jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore android/app/release.keystore \
-            -storepass "${{ secrets.STORE_PASSWORD }}" \
-            -keypass "${{ secrets.KEY_PASSWORD }}" \
-            -signedjar android/app/build/outputs/bundle/release/app-release-signed.aab \
-            android/app/build/outputs/bundle/release/app-release.aab "${{ secrets.KEY_ALIAS }}"
+            -keystore temp_release.keystore \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -keypass "$KEY_PASSWORD" \
+            android/app/build/outputs/bundle/release/app-release.aab "$KEY_ALIAS"
+
+          # Okamžité vymazanie dočasného keystore zo súborového systému bežca
+          rm -f temp_release.keystore
 
       - name: Upload Signed AAB
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-1.0.1-b3
-          path: android/app/build/outputs/bundle/release/app-release-signed.aab
+          name: app-release
+          path: android/app/build/outputs/bundle/release/app-release-101_3b.aab
           retention-days: 7
