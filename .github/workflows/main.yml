@@ -41,7 +41,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm install --legacy-peer-deps
-          npm install --legacy-peer-deps @capacitor/core @capacitor/cli @capacitor/android
+          npm install --legacy-peer-deps @capacitor/core @capacitor/cli @capacitor/android @capacitor/assets
 
       - name: Build web assets
         run: npm run build
@@ -51,6 +51,29 @@ jobs:
           if [ ! -d "android" ]; then
             npx cap add android
           fi
+
+      - name: Generate Android App Icons from assets/icon.png
+        run: |
+          # 1. Príprava zdrojových súborov pre @capacitor/assets
+          mkdir -p assets
+          cp -f assets/icon.png assets/icon-only.png 2>/dev/null || true
+          cp -f assets/icon.png assets/icon-foreground.png 2>/dev/null || true
+          cp -f assets/icon.png assets/logo.png 2>/dev/null || true
+
+          # 2. Automatické vygenerovanie cez @capacitor/assets
+          npx @capacitor/assets generate --android --assetPath assets || true
+
+          # 3. Istota: Priamy prevod do všetkých mipmap rozlíšení (mdpi, hdpi, xhdpi, xxhdpi, xxxhdpi)
+          for density in "mdpi:48:108" "hdpi:72:162" "xhdpi:96:216" "xxhdpi:144:324" "xxxhdpi:192:432"; do
+            IFS=":" read -r name size fg_size <<< "$density"
+            dir="android/app/src/main/res/mipmap-$name"
+            mkdir -p "$dir"
+            if command -v convert >/dev/null 2>&1; then
+              convert assets/icon.png -resize "${size}x${size}" "$dir/ic_launcher.png" || true
+              convert assets/icon.png -resize "${size}x${size}" "$dir/ic_launcher_round.png" || true
+              convert assets/icon.png -resize "${fg_size}x${fg_size}" "$dir/ic_launcher_foreground.png" || true
+            fi
+          done
 
       - name: Configure Android versions and Keystore
         env:
