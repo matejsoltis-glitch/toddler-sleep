@@ -1,6 +1,6 @@
 import React from 'react';
-import { X, Globe, Moon, Sun, Flame, Eye, ChevronDown } from 'lucide-react';
-import { Language, NightModeState } from '../types';
+import { X, Globe, Sun, Flame, Eye, ChevronDown, Contrast, Feather } from 'lucide-react';
+import { Language, NightModeState, ColorMode } from '../types';
 import { translations } from '../i18n/translations';
 import { triggerHaptic } from '../utils/haptics';
 
@@ -11,6 +11,8 @@ interface SettingsModalProps {
   onSelectLanguage: (lang: Language) => void;
   nightMode: NightModeState;
   onUpdateNightMode: (updates: Partial<NightModeState>) => void;
+  colorMode: ColorMode;
+  onChangeColorMode: (mode: ColorMode) => void;
   hapticsEnabled?: boolean;
   onToggleHaptics?: (enabled: boolean) => void;
 }
@@ -22,6 +24,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSelectLanguage,
   nightMode,
   onUpdateNightMode,
+  colorMode,
+  onChangeColorMode,
 }) => {
   if (!isOpen) return null;
 
@@ -177,6 +181,90 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               }`}
             >
               {t.nightSettingsModal.autoSunsetBtn}
+            </button>
+          </div>
+        </div>
+
+        {/* 2.5. App Color Mode: Color vs Lite vs Black & White */}
+        <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Contrast className="w-4 h-4 text-indigo-300 shrink-0" />
+              <span className="text-sm font-medium text-white truncate">
+                {t.nightSettingsModal.colorModeHeading}
+              </span>
+            </div>
+            <span
+              className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium shrink-0 ${
+                colorMode === 'grayscale'
+                  ? 'bg-white/20 text-white border border-white/30'
+                  : colorMode === 'lite'
+                  ? 'bg-sky-400/20 text-sky-200 border border-sky-400/30'
+                  : 'bg-indigo-400/20 text-indigo-200 border border-indigo-400/30'
+              }`}
+            >
+              {colorMode === 'grayscale'
+                ? t.nightSettingsModal.colorModeGrayscaleBadge
+                : colorMode === 'lite'
+                ? t.nightSettingsModal.colorModeLiteBadge
+                : t.nightSettingsModal.colorModeColorBadge}
+            </span>
+          </div>
+
+          <p className="text-xs text-white/60 leading-relaxed">
+            {t.nightSettingsModal.colorModeDesc}
+          </p>
+
+          <div className="grid grid-cols-3 gap-2 mt-1">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic(10);
+                onChangeColorMode('color');
+              }}
+              className={`py-2.5 px-2 rounded-xl text-xs font-semibold transition-all duration-300 touch-manipulation flex items-center justify-center gap-1.5 ${
+                colorMode === 'color'
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-slate-950 shadow-lg shadow-amber-500/20 font-bold'
+                  : 'bg-white/5 hover:bg-white/10 text-white/75 border border-white/10'
+              }`}
+            >
+              <span className="w-3 h-3 rounded-full bg-gradient-to-tr from-amber-300 via-rose-400 to-indigo-500 ring-1 ring-black/20 shrink-0" />
+              <span className="truncate">{t.nightSettingsModal.colorModeColor}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic(10);
+                onChangeColorMode('lite');
+              }}
+              className={`py-2.5 px-2 rounded-xl text-xs font-semibold transition-all duration-300 touch-manipulation flex items-center justify-center gap-1.5 ${
+                colorMode === 'lite'
+                  ? 'bg-gradient-to-r from-sky-300 to-emerald-300 text-slate-950 shadow-lg shadow-sky-400/20 font-bold'
+                  : 'bg-white/5 hover:bg-white/10 text-white/75 border border-white/10'
+              }`}
+            >
+              <Feather className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{t.nightSettingsModal.colorModeLite}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic(10);
+                onChangeColorMode('grayscale');
+              }}
+              className={`py-2.5 px-2 rounded-xl text-xs font-semibold transition-all duration-300 touch-manipulation flex items-center justify-center gap-1.5 ${
+                colorMode === 'grayscale'
+                  ? 'bg-gradient-to-r from-zinc-100 to-zinc-300 text-slate-950 shadow-lg shadow-white/15 font-bold'
+                  : 'bg-white/5 hover:bg-white/10 text-white/75 border border-white/10'
+              }`}
+            >
+              <span
+                className="w-3 h-3 rounded-full border border-white/40 shrink-0"
+                style={{ background: 'linear-gradient(90deg, #ffffff 50%, #1e293b 50%)' }}
+              />
+              <span className="truncate">{t.nightSettingsModal.colorModeGrayscale}</span>
             </button>
           </div>
         </div>

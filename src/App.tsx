@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Moon } from 'lucide-react';
 import { ClockHeader } from './components/ClockHeader';
 import { MainMenu } from './components/MainMenu';
@@ -24,6 +24,7 @@ import {
   LightSpeed,
   NightModeState,
   Language,
+  ColorMode,
 } from './types';
 
 interface LastActiveConfig {
@@ -227,6 +228,47 @@ export default function App() {
   const [isFadeEnabled, setIsFadeEnabled] = useState<boolean>(true);
   const [fadeMinutes, setFadeMinutes] = useState<number>(10);
 
+  // Mode 4: Active ongoing sleep tracking (shared across Header, MainMenu & ScheduleAssistantMode)
+  const [activeSleepStart, setActiveSleepStart] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('toddler_active_sleep_start');
+    } catch {
+      return null;
+    }
+  });
+  const [sleepElapsedSeconds, setSleepElapsedSeconds] = useState<number>(0);
+
+  const handleUpdateActiveSleepStart = (nextIso: string | null) => {
+    setActiveSleepStart(nextIso);
+    try {
+      if (nextIso) {
+        localStorage.setItem('toddler_active_sleep_start', nextIso);
+      } else {
+        localStorage.removeItem('toddler_active_sleep_start');
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (!activeSleepStart) {
+      setSleepElapsedSeconds(0);
+      return;
+    }
+    const calcElapsed = () => {
+      const startMs = new Date(activeSleepStart).getTime();
+      if (Number.isNaN(startMs)) {
+        setSleepElapsedSeconds(0);
+        return;
+      }
+      setSleepElapsedSeconds(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
+    };
+    calcElapsed();
+    const interval = setInterval(calcElapsed, 1000);
+    return () => clearInterval(interval);
+  }, [activeSleepStart]);
+
   // Track previously running modes so clicking "Spustiť" restarts them faithfully
   const [lastActiveConfig, setLastActiveConfig] = useState<LastActiveConfig>({
     light: true,
@@ -324,6 +366,80 @@ export default function App() {
   const [isTouchLocked, setIsTouchLocked] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [hapticsEnabled, setHapticsEnabledState] = useState<boolean>(() => isHapticsEnabled());
+
+  // Color vs Lite (Low-effects Performance) vs Black & White (Grayscale) display mode
+  const [colorMode, setColorMode] = useState<ColorMode>(() => {
+    try {
+      const saved = localStorage.getItem('toddler_color_mode');
+      if (saved === 'grayscale' || saved === 'lite' || saved === 'color') {
+        return saved;
+      }
+    } catch {
+      // ignore
+    }
+    return 'color';
+  });
+  const [isGrayscaleMounted, setIsGrayscaleMounted] = useState<boolean>(() => colorMode === 'grayscale');
+  const [grayscaleLayerOpacity, setGrayscaleLayerOpacity] = useState<number>(() =>
+    colorMode === 'grayscale' ? 1 : 0
+  );
+  const [colorWaveEffect, setColorWaveEffect] = useState<{ key: number; targetMode: ColorMode } | null>(null);
+  const grayscaleCleanupTimerRef = useRef<number | null>(null);
+  const colorWaveTimerRef = useRef<number | null>(null);
+
+  // Sync .app-lite class on document root so heavy blurs & infinite animations are disabled globally
+  useEffect(() => {
+    document.documentElement.classList.toggle('app-lite', colorMode === 'lite');
+  }, [colorMode]);
+
+  const handleChangeColorMode = (nextMode: ColorMode) => {
+    if (nextMode === colorMode) return;
+    const prevMode = colorMode;
+    setColorMode(nextMode);
+    try {
+      localStorage.setItem('toddler_color_mode', nextMode);
+    } catch {
+      // ignore
+    }
+
+    if (grayscaleCleanupTimerRef.current) {
+      window.clearTimeout(grayscaleCleanupTimerRef.current);
+      grayscaleCleanupTimerRef.current = null;
+    }
+    if (colorWaveTimerRef.current) {
+      window.clearTimeout(colorWaveTimerRef.current);
+      colorWaveTimerRef.current = null;
+    }
+
+    // Trigger +25% slower (2400ms) gentle dual-mist & bloom transition effect
+    setColorWaveEffect({ key: Date.now(), targetMode: nextMode });
+    colorWaveTimerRef.current = window.setTimeout(() => {
+      setColorWaveEffect(null);
+    }, 2480);
+
+    if (nextMode === 'grayscale') {
+      setIsGrayscaleMounted(true);
+      setGrayscaleLayerOpacity(0);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setGrayscaleLayerOpacity(1);
+        });
+      });
+    } else if (prevMode === 'grayscale') {
+      setIsGrayscaleMounted(true);
+      setGrayscaleLayerOpacity(0);
+      grayscaleCleanupTimerRef.current = window.setTimeout(() => {
+        setIsGrayscaleMounted(false);
+      }, 2320);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (grayscaleCleanupTimerRef.current) window.clearTimeout(grayscaleCleanupTimerRef.current);
+      if (colorWaveTimerRef.current) window.clearTimeout(colorWaveTimerRef.current);
+    };
+  }, []);
 
   const handleToggleHaptics = (enabled: boolean) => {
     setHapticsEnabled(enabled);
@@ -642,10 +758,10 @@ export default function App() {
         }`}
         aria-hidden="true"
       >
-        {/* Soft upper ambient glow with active color (maskImage with real backgroundColor enables continuous smooth color interpolation) */}
+        {/* Soft upper ambient glow with active color */}
         <div
           className={`absolute inset-0 transition-colors ease-in-out ${
-            lightSpeed === 'breathing' ? 'animate-rhythmic-breathing' : ''
+            lightSpeed === 'breathing' && colorMode !== 'lite' ? 'animate-rhythmic-breathing' : ''
           }`}
           style={{
             backgroundColor: activeLightColor,
@@ -655,26 +771,30 @@ export default function App() {
             transitionDuration: `${Math.round(speedDurations[lightSpeed] * 0.92)}ms`,
           }}
         />
-        {/* Soft lower ambient glow with secondary palette color */}
-        <div
-          className="absolute inset-0 transition-colors ease-in-out"
-          style={{
-            backgroundColor: nextLightColor,
-            opacity: 0.22,
-            maskImage: 'radial-gradient(circle at 50% 85%, black 0%, transparent 70%)',
-            WebkitMaskImage: 'radial-gradient(circle at 50% 85%, black 0%, transparent 70%)',
-            transitionDuration: `${Math.round(speedDurations[lightSpeed] * 0.92)}ms`,
-          }}
-        />
-        {/* Ambient screen wash scaled with brightness */}
-        <div
-          className="absolute inset-0 transition-colors ease-in-out mix-blend-screen"
-          style={{
-            backgroundColor: activeLightColor,
-            opacity: (brightness / 100) * 0.16,
-            transitionDuration: `${Math.round(speedDurations[lightSpeed] * 0.92)}ms`,
-          }}
-        />
+        {colorMode !== 'lite' && (
+          <>
+            {/* Soft lower ambient glow with secondary palette color */}
+            <div
+              className="absolute inset-0 transition-colors ease-in-out"
+              style={{
+                backgroundColor: nextLightColor,
+                opacity: 0.22,
+                maskImage: 'radial-gradient(circle at 50% 85%, black 0%, transparent 70%)',
+                WebkitMaskImage: 'radial-gradient(circle at 50% 85%, black 0%, transparent 70%)',
+                transitionDuration: `${Math.round(speedDurations[lightSpeed] * 0.92)}ms`,
+              }}
+            />
+            {/* Ambient screen wash scaled with brightness */}
+            <div
+              className="absolute inset-0 transition-colors ease-in-out mix-blend-screen"
+              style={{
+                backgroundColor: activeLightColor,
+                opacity: (brightness / 100) * 0.16,
+                transitionDuration: `${Math.round(speedDurations[lightSpeed] * 0.92)}ms`,
+              }}
+            />
+          </>
+        )}
       </div>
 
       {/* Master Application Brightness Dimmer - Controls overall screen brightness */}
@@ -771,6 +891,8 @@ export default function App() {
         onSelectLanguage={handleSelectLanguage}
         nightMode={nightMode}
         onUpdateNightMode={handleUpdateNightMode}
+        colorMode={colorMode}
+        onChangeColorMode={handleChangeColorMode}
       />
 
       {/* Permanent Header with app title, back button, lock, and settings gear */}
@@ -801,6 +923,12 @@ export default function App() {
           activeSoundMode={soundPlayingType}
           isPlaying={isSoundPlaying}
           timerRemaining={durationMinutes > 0 ? remainingSeconds : null}
+          activeSleepStart={activeSleepStart}
+          sleepElapsedSeconds={sleepElapsedSeconds}
+          onOpenSchedule={() => {
+            triggerHaptic(8);
+            setActiveMode('schedule');
+          }}
           onOpenSettings={() => {
             triggerHaptic(10);
             setIsSettingsOpen(true);
@@ -835,6 +963,7 @@ export default function App() {
               onChangeBrightness={handleUpdateBrightness}
               componentsOpacity={componentsOpacity}
               onChangeComponentsOpacity={handleUpdateComponentsOpacity}
+              isScheduleActive={Boolean(activeSleepStart)}
             />
           )}
 
@@ -893,7 +1022,12 @@ export default function App() {
 
           {/* VIEW 4: Mode 4 - Schedule Assistant */}
           {activeMode === 'schedule' && (
-            <ScheduleAssistantMode language={language} />
+            <ScheduleAssistantMode
+              language={language}
+              activeSleepStart={activeSleepStart}
+              sleepElapsedSeconds={sleepElapsedSeconds}
+              onUpdateActiveSleepStart={handleUpdateActiveSleepStart}
+            />
           )}
         </div>
 
@@ -934,7 +1068,7 @@ export default function App() {
           title="Kliknite pre zobrazenie noviniek a histórie verzií"
         >
           <span className="font-medium text-white/60 group-hover:text-amber-200">Toddler sleep assistant</span>
-          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-white/10 group-hover:bg-amber-400 group-hover:text-slate-950 text-amber-300 transition-all">v1.0.1</span>
+          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-white/10 group-hover:bg-amber-400 group-hover:text-slate-950 text-amber-300 transition-all">v1.0.2</span>
         </button>
 
         <button
@@ -963,6 +1097,71 @@ export default function App() {
         onClose={() => setIsAuthorOpen(false)}
         language={language}
       />
+
+      {/* Global Grayscale (Shades of Gray) Overlay with Smooth 2250ms Desaturation Transition */}
+      {isGrayscaleMounted && (
+        <div
+          className="grayscale-master-overlay pointer-events-none fixed inset-0 z-[70] transition-opacity duration-[2250ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+          style={{
+            opacity: grayscaleLayerOpacity,
+            backdropFilter: 'grayscale(100%) contrast(1.04)',
+            WebkitBackdropFilter: 'grayscale(100%) contrast(1.04)',
+          }}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Gentle Centered Eye-Safe Multi-Layered Mist & Bloom Transition between Color / Lite / B&W */}
+      {colorWaveEffect && (
+        <div
+          key={colorWaveEffect.key}
+          className="pointer-events-none fixed inset-0 z-[71] overflow-hidden"
+          aria-hidden="true"
+        >
+          {/* Subtle ambient radial bloom */}
+          <div
+            className="animate-bw-bloom absolute inset-0"
+            style={{
+              background:
+                colorWaveEffect.targetMode === 'grayscale'
+                  ? 'radial-gradient(circle at 50% 50%, rgba(226,232,240,0.22) 0%, rgba(148,163,184,0.08) 45%, transparent 78%)'
+                  : colorWaveEffect.targetMode === 'lite'
+                  ? 'radial-gradient(circle at 50% 50%, rgba(125,211,252,0.18) 0%, rgba(110,231,183,0.08) 45%, transparent 78%)'
+                  : 'radial-gradient(circle at 50% 50%, rgba(251,191,36,0.18) 0%, rgba(129,140,248,0.09) 45%, transparent 78%)',
+            }}
+          />
+
+          {/* Primary centered expanding soft mist halo */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div
+              className="animate-bw-wave w-[110vmax] h-[110vmax] rounded-full shrink-0"
+              style={{
+                background:
+                  colorWaveEffect.targetMode === 'grayscale'
+                    ? 'radial-gradient(circle, rgba(255,255,255,0) 44%, rgba(226,232,240,0.14) 64%, rgba(248,250,252,0.18) 70%, rgba(255,255,255,0) 80%)'
+                    : colorWaveEffect.targetMode === 'lite'
+                    ? 'radial-gradient(circle, rgba(255,255,255,0) 44%, rgba(125,211,252,0.14) 64%, rgba(110,231,183,0.16) 70%, rgba(255,255,255,0) 80%)'
+                    : 'radial-gradient(circle, rgba(255,255,255,0) 44%, rgba(251,191,36,0.15) 60%, rgba(244,114,182,0.12) 66%, rgba(129,140,248,0.15) 72%, rgba(255,255,255,0) 80%)',
+              }}
+            />
+          </div>
+
+          {/* Secondary centered trailing echo mist ring (no harsh hard border) */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div
+              className="animate-bw-echo w-[100vmax] h-[100vmax] rounded-full shrink-0"
+              style={{
+                background:
+                  colorWaveEffect.targetMode === 'grayscale'
+                    ? 'radial-gradient(circle, rgba(255,255,255,0) 56%, rgba(248,250,252,0.14) 68%, rgba(255,255,255,0) 76%)'
+                    : colorWaveEffect.targetMode === 'lite'
+                    ? 'radial-gradient(circle, rgba(255,255,255,0) 56%, rgba(125,211,252,0.15) 68%, rgba(255,255,255,0) 76%)'
+                    : 'radial-gradient(circle, rgba(255,255,255,0) 56%, rgba(253,224,71,0.14) 68%, rgba(255,255,255,0) 76%)',
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

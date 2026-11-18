@@ -17,6 +17,9 @@ interface ClockHeaderProps {
   activeSoundMode: 'none' | 'white-noise' | 'nature';
   isPlaying: boolean;
   timerRemaining: number | null;
+  activeSleepStart?: string | null;
+  sleepElapsedSeconds?: number;
+  onOpenSchedule?: () => void;
   onOpenSettings: () => void;
 }
 
@@ -30,6 +33,9 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
   onToggleTouchLock,
   isPlaying,
   timerRemaining,
+  activeSleepStart = null,
+  sleepElapsedSeconds = 0,
+  onOpenSchedule,
   onOpenSettings,
 }) => {
   const t = translations[language];
@@ -41,21 +47,31 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  const formatSleepElapsed = (sec: number) => {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   return (
     <header className="w-full border-b border-white/10 select-none bg-slate-950/70 backdrop-blur-md sticky top-0 z-30 pt-[6mm]">
       {/* Main Top Header without any distracting clock, day or date */}
-      <div className="w-full max-w-md mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
+      <div className="w-full max-w-md mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between gap-1.5 sm:gap-3">
         {/* Left side: Day/Night status or Back button, with remaining timer positioned cleanly underneath */}
-        <div className="flex flex-col items-start justify-center min-w-0">
+        <div className="flex flex-col items-start justify-center min-w-0 flex-1">
           {activeMode !== 'menu' ? (
             <button
               onClick={onBackToMenu}
-              className="h-8 px-2.5 -ml-1 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/95 flex items-center gap-1.5 text-xs font-semibold transition-all touch-manipulation border border-white/15 shadow-sm"
+              className="min-h-8 px-2 sm:px-2.5 py-1 -ml-0.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/95 flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold transition-all touch-manipulation border border-white/15 shadow-sm max-w-full text-left"
               title={t.backToMenuTooltip}
               aria-label={t.backToMenuTooltip}
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>{t.mainMenuButton}</span>
+              <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+              <span className="min-w-0 leading-[1.15] whitespace-normal">{t.mainMenuButton}</span>
             </button>
           ) : (
             <button
@@ -63,7 +79,7 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
                 triggerHaptic(8);
                 onToggleNightMode();
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all active:scale-95 touch-manipulation border cursor-pointer ${
+              className={`min-h-8 flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-semibold transition-all active:scale-95 touch-manipulation border cursor-pointer max-w-full text-left ${
                 isDarkMode
                   ? 'bg-amber-400/20 border-amber-400/40 text-amber-300 shadow-sm'
                   : 'bg-white/10 hover:bg-white/15 border-white/15 text-white/90'
@@ -73,13 +89,15 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
             >
               {isDarkMode ? (
                 <>
-                  <Moon className="w-3.5 h-3.5 text-amber-300 fill-amber-300/30" />
-                  <span>{nightMode.isAutoSunset ? t.sunsetActive : t.nightMode}</span>
+                  <Moon className="w-3.5 h-3.5 text-amber-300 fill-amber-300/30 shrink-0" />
+                  <span className="min-w-0 leading-[1.15] whitespace-normal">
+                    {nightMode.isAutoSunset ? t.sunsetActive : t.nightMode}
+                  </span>
                 </>
               ) : (
                 <>
-                  <Sun className="w-3.5 h-3.5 text-amber-300" />
-                  <span>{t.dayActive}</span>
+                  <Sun className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                  <span className="min-w-0 leading-[1.15] whitespace-normal">{t.dayActive}</span>
                 </>
               )}
             </button>
@@ -97,19 +115,33 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
           )}
         </div>
 
-        {/* Right side: Gentle Battery indicator, Child lock button, Settings Gear */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        {/* Right side: Gentle Battery indicator, Mode 4 Sleep Timer, Child lock button, Settings Gear */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           {/* Gentle Battery Indicator */}
-          <div className="flex items-center px-1">
+          <div className="flex items-center px-0.5 sm:px-1">
             <BatteryIndicator className="text-white/45" />
           </div>
+
+          {/* Active Mode 4 Sleep Duration Timer (between BatteryIndicator and Child Lock) */}
+          {activeSleepStart && (
+            <button
+              type="button"
+              onClick={onOpenSchedule}
+              title={t.modes.schedule?.tabTitle || 'Schedule'}
+              aria-label={t.modes.schedule?.tabTitle || 'Schedule'}
+              className="h-9 sm:h-10 px-1.5 sm:px-2.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 active:scale-95 border border-indigo-400/35 text-indigo-200 text-[11px] font-mono font-semibold flex items-center gap-1 transition-all touch-manipulation shadow-sm"
+            >
+              <Moon className="w-3 h-3 text-indigo-300 fill-indigo-300/40 animate-pulse shrink-0" />
+              <span>{formatSleepElapsed(sleepElapsedSeconds)}</span>
+            </button>
+          )}
 
           {/* Child Lock button */}
           <button
             onClick={onToggleTouchLock}
             title={isTouchLocked ? t.touchLocked : t.touchLock}
             aria-label={t.touchLock}
-            className={`h-10 w-10 sm:w-auto sm:px-2.5 flex items-center justify-center gap-1.5 rounded-xl text-xs font-medium transition-all active:scale-95 touch-manipulation ${
+            className={`h-9 w-9 sm:h-10 sm:w-auto sm:px-2.5 flex items-center justify-center gap-1.5 rounded-xl text-xs font-medium transition-all active:scale-95 touch-manipulation ${
               isTouchLocked
                 ? 'bg-amber-400 text-slate-950 font-bold ring-2 ring-amber-300 shadow-md'
                 : 'bg-white/5 hover:bg-white/10 text-white/70 border border-white/10'
@@ -124,7 +156,7 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
             onClick={onOpenSettings}
             title={t.settings}
             aria-label={t.settings}
-            className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 border border-white/15 transition-all touch-manipulation shadow-sm"
+            className="h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 border border-white/15 transition-all touch-manipulation shadow-sm"
           >
             <Settings className="w-4 h-4 text-amber-200" />
           </button>

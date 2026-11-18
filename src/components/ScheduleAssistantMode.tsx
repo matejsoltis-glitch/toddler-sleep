@@ -13,6 +13,8 @@ import {
   ChevronRight,
   Filter,
   X,
+  Pencil,
+  Check,
 } from 'lucide-react';
 import { Language, SleepSession, SleepQuality, SleepType } from '../types';
 import { triggerHaptic } from '../utils/haptics';
@@ -22,6 +24,9 @@ import { Share } from '@capacitor/share';
 
 interface ScheduleAssistantModeProps {
   language: Language;
+  activeSleepStart?: string | null;
+  sleepElapsedSeconds?: number;
+  onUpdateActiveSleepStart?: (nextIso: string | null) => void;
 }
 
 const STORAGE_KEY_SESSIONS = 'toddler_sleep_sessions';
@@ -114,6 +119,15 @@ interface ScheduleTexts {
   calendarCloseBtn: string;
   monthNames: string[];
   weekDaysShort: string[];
+  // Edit saved & ongoing sleep keys
+  editTitle: string;
+  editSessionModalTitle: string;
+  toastSessionUpdated: string;
+  toastStartTimeUpdated: string;
+  editStartTimeBtn: string;
+  customStartTimeLabel: string;
+  applyBtn: string;
+  cancelBtn: string;
 }
 
 const scheduleTexts: Record<Language, ScheduleTexts> = {
@@ -206,6 +220,14 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
       'Júl', 'August', 'September', 'Október', 'November', 'December',
     ],
     weekDaysShort: ['Po', 'Ut', 'St', 'Št', 'Pi', 'So', 'Ne'],
+    editTitle: 'Upraviť',
+    editSessionModalTitle: 'Upraviť záznam spánku',
+    toastSessionUpdated: 'Záznam spánku bol upravený ✨',
+    toastStartTimeUpdated: 'Začiatočný čas zaspatia bol upravený',
+    editStartTimeBtn: 'Upraviť čas',
+    customStartTimeLabel: 'Presný čas zaspatia:',
+    applyBtn: 'Použiť',
+    cancelBtn: 'Zrušiť',
   },
   cs: {
     currentStatus: 'Aktuální stav',
@@ -296,6 +318,14 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
       'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec',
     ],
     weekDaysShort: ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'],
+    editTitle: 'Upravit',
+    editSessionModalTitle: 'Upravit záznam spánku',
+    toastSessionUpdated: 'Záznam spánku byl upraven ✨',
+    toastStartTimeUpdated: 'Počáteční čas usnutí byl upraven',
+    editStartTimeBtn: 'Upravit čas',
+    customStartTimeLabel: 'Přesný čas usnutí:',
+    applyBtn: 'Použít',
+    cancelBtn: 'Zrušit',
   },
   en: {
     currentStatus: 'Current Status',
@@ -386,6 +416,14 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
       'July', 'August', 'September', 'October', 'November', 'December',
     ],
     weekDaysShort: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
+    editTitle: 'Edit',
+    editSessionModalTitle: 'Edit Sleep Record',
+    toastSessionUpdated: 'Sleep record updated ✨',
+    toastStartTimeUpdated: 'Sleep start time updated',
+    editStartTimeBtn: 'Edit time',
+    customStartTimeLabel: 'Exact start time:',
+    applyBtn: 'Apply',
+    cancelBtn: 'Cancel',
   },
   pl: {
     currentStatus: 'Aktualny stan',
@@ -476,6 +514,14 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
       'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień',
     ],
     weekDaysShort: ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'],
+    editTitle: 'Edytuj',
+    editSessionModalTitle: 'Edytuj wpis snu',
+    toastSessionUpdated: 'Wpis snu zaktualizowany ✨',
+    toastStartTimeUpdated: 'Zmieniono godzinę zaśnięcia',
+    editStartTimeBtn: 'Zmień czas',
+    customStartTimeLabel: 'Dokładna godzina zaśnięcia:',
+    applyBtn: 'Zastosuj',
+    cancelBtn: 'Anuluj',
   },
   hu: {
     currentStatus: 'Jelenlegi állapot',
@@ -566,6 +612,14 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
       'Július', 'Augusztus', 'Szeptember', 'Október', 'November', 'December',
     ],
     weekDaysShort: ['Hé', 'Ke', 'Sze', 'Csü', 'Pén', 'Szo', 'Vas'],
+    editTitle: 'Szerkesztés',
+    editSessionModalTitle: 'Alvás szerkesztése',
+    toastSessionUpdated: 'Alvásadatok frissítve ✨',
+    toastStartTimeUpdated: 'Elalvás ideje frissítve',
+    editStartTimeBtn: 'Idő módosítása',
+    customStartTimeLabel: 'Pontos elalvási idő:',
+    applyBtn: 'Alkalmaz',
+    cancelBtn: 'Mégse',
   },
   uk: {
     currentStatus: 'Поточний стан',
@@ -656,6 +710,14 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
       'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень',
     ],
     weekDaysShort: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'],
+    editTitle: 'Редагувати',
+    editSessionModalTitle: 'Редагувати запис сну',
+    toastSessionUpdated: 'Запис сну оновлено ✨',
+    toastStartTimeUpdated: 'Час засинання змінено',
+    editStartTimeBtn: 'Змінити час',
+    customStartTimeLabel: 'Точний час засинання:',
+    applyBtn: 'Застосувати',
+    cancelBtn: 'Скасувати',
   },
   it: {
     currentStatus: 'Stato attuale',
@@ -746,6 +808,14 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
       'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
     ],
     weekDaysShort: ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'],
+    editTitle: 'Modifica',
+    editSessionModalTitle: 'Modifica sessione',
+    toastSessionUpdated: 'Sessione aggiornata ✨',
+    toastStartTimeUpdated: 'Ora di inizio aggiornata',
+    editStartTimeBtn: 'Modifica ora',
+    customStartTimeLabel: 'Ora esatta di addormentamento:',
+    applyBtn: 'Applica',
+    cancelBtn: 'Annulla',
   },
 };
 
@@ -759,7 +829,12 @@ const dateLocales: Record<Language, string> = {
   it: 'it-IT',
 };
 
-export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ language }) => {
+export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
+  language,
+  activeSleepStart: controlledActiveSleepStart,
+  sleepElapsedSeconds: controlledElapsedSeconds,
+  onUpdateActiveSleepStart,
+}) => {
   const texts = scheduleTexts[language] || scheduleTexts.en;
   const currentLocale = dateLocales[language] || 'en-US';
 
@@ -869,20 +944,50 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
     ];
   });
 
-  // Active ongoing sleep start time (if baby is currently asleep)
-  const [activeSleepStart, setActiveSleepStart] = useState<string | null>(() => {
+  // Active ongoing sleep start time (controlled by App.tsx if provided, with fallback local state)
+  const [internalActiveSleepStart, setInternalActiveSleepStart] = useState<string | null>(() => {
     try {
       return localStorage.getItem(STORAGE_KEY_ACTIVE_SLEEP);
     } catch {
       return null;
     }
   });
+  const [internalElapsedSec, setInternalElapsedSec] = useState<number>(0);
 
-  // Current elapsed seconds for active ongoing sleep
-  const [activeElapsedSec, setActiveElapsedSec] = useState<number>(0);
+  const isControlled = controlledActiveSleepStart !== undefined && onUpdateActiveSleepStart !== undefined;
+  const activeSleepStart = isControlled ? controlledActiveSleepStart : internalActiveSleepStart;
+  const setActiveSleepStartUnified = (nextIso: string | null) => {
+    if (isControlled && onUpdateActiveSleepStart) {
+      onUpdateActiveSleepStart(nextIso);
+    } else {
+      setInternalActiveSleepStart(nextIso);
+      try {
+        if (nextIso) {
+          localStorage.setItem(STORAGE_KEY_ACTIVE_SLEEP, nextIso);
+        } else {
+          localStorage.removeItem(STORAGE_KEY_ACTIVE_SLEEP);
+        }
+      } catch {
+        // ignore
+      }
+    }
+  };
 
   // Manual entry form expand state
   const [showManualForm, setShowManualForm] = useState(false);
+
+  // Ongoing sleep start time adjustment dropdown state
+  const [isEditingStartTimeOpen, setIsEditingStartTimeOpen] = useState(false);
+  const [customStartTimeInput, setCustomStartTimeInput] = useState('12:00');
+
+  // Edit saved sleep session modal state
+  const [editingSession, setEditingSession] = useState<SleepSession | null>(null);
+  const [editDate, setEditDate] = useState('');
+  const [editStartTime, setEditStartTime] = useState('13:00');
+  const [editEndTime, setEditEndTime] = useState('14:30');
+  const [editType, setEditType] = useState<SleepType>('day-nap');
+  const [editQuality, setEditQuality] = useState<SleepQuality>('peaceful');
+  const [editNotes, setEditNotes] = useState('');
 
   // Quick finish modal state when waking up from live timer
   const [wakeModalOpen, setWakeModalOpen] = useState(false);
@@ -917,23 +1022,26 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
     }
   }, [sessions]);
 
-  // Live timer tick for ongoing sleep
+  // Fallback live timer tick if uncontrolled
   useEffect(() => {
-    if (!activeSleepStart) {
-      setActiveElapsedSec(0);
+    if (isControlled) return;
+    if (!internalActiveSleepStart) {
+      setInternalElapsedSec(0);
       return;
     }
 
     const calcElapsed = () => {
-      const startMs = new Date(activeSleepStart).getTime();
+      const startMs = new Date(internalActiveSleepStart).getTime();
       const diffSec = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
-      setActiveElapsedSec(diffSec);
+      setInternalElapsedSec(diffSec);
     };
 
     calcElapsed();
     const interval = setInterval(calcElapsed, 1000);
     return () => clearInterval(interval);
-  }, [activeSleepStart]);
+  }, [isControlled, internalActiveSleepStart]);
+
+  const activeElapsedSec = isControlled ? (controlledElapsedSeconds ?? 0) : internalElapsedSec;
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -964,17 +1072,57 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
     }
   };
 
+  // Local date/time helpers for inputs
+  const toLocalDateStr = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const toLocalTimeStr = (d: Date) => {
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
+  };
+
   // 1. Live Sleep: Baby fell asleep
   const handleBabyFellAsleep = () => {
     triggerHaptic('heavy');
     const nowIso = new Date().toISOString();
-    setActiveSleepStart(nowIso);
-    try {
-      localStorage.setItem(STORAGE_KEY_ACTIVE_SLEEP, nowIso);
-    } catch {
-      // ignore
-    }
+    setActiveSleepStartUnified(nowIso);
+    setIsEditingStartTimeOpen(false);
     showToast(texts.toastTrackingStarted);
+  };
+
+  // Open/toggle panel to adjust ongoing sleep start time
+  const handleToggleEditStartTime = () => {
+    triggerHaptic('light');
+    if (!isEditingStartTimeOpen && activeSleepStart) {
+      setCustomStartTimeInput(toLocalTimeStr(new Date(activeSleepStart)));
+    }
+    setIsEditingStartTimeOpen((prev) => !prev);
+  };
+
+  // Adjust ongoing sleep start time via exact time input
+  const handleApplyCustomStartTime = () => {
+    if (!customStartTimeInput) return;
+    const [hhStr, mmStr] = customStartTimeInput.split(':');
+    const hh = parseInt(hhStr, 10);
+    const mm = parseInt(mmStr, 10);
+    if (Number.isNaN(hh) || Number.isNaN(mm)) return;
+
+    triggerHaptic('medium');
+    const candidate = new Date();
+    candidate.setHours(hh, mm, 0, 0);
+    // If selected time is later than current time (e.g. after midnight editing 23:30), assume yesterday
+    if (candidate.getTime() > Date.now()) {
+      candidate.setDate(candidate.getDate() - 1);
+    }
+
+    setActiveSleepStartUnified(candidate.toISOString());
+    setIsEditingStartTimeOpen(false);
+    showToast(texts.toastStartTimeUpdated);
   };
 
   // 2. Live Sleep: Baby woke up
@@ -998,6 +1146,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
     setModalType(defaultType);
     setModalQuality('peaceful');
     setModalNotes('');
+    setIsEditingStartTimeOpen(false);
     setWakeModalOpen(true);
   };
 
@@ -1016,13 +1165,13 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
       notes: modalNotes.trim() || undefined,
     };
 
-    setSessions((prev) => [newSession, ...prev]);
-    setActiveSleepStart(null);
-    try {
-      localStorage.removeItem(STORAGE_KEY_ACTIVE_SLEEP);
-    } catch {
-      // ignore
-    }
+    setSessions((prev) =>
+      [newSession, ...prev].sort(
+        (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+      )
+    );
+    setActiveSleepStartUnified(null);
+    setIsEditingStartTimeOpen(false);
     setWakeModalOpen(false);
     setPendingEndSession(null);
     showToast(texts.toastSessionSaved);
@@ -1031,12 +1180,8 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
   // Cancel ongoing sleep without saving
   const handleCancelLiveSession = () => {
     triggerHaptic('light');
-    setActiveSleepStart(null);
-    try {
-      localStorage.removeItem(STORAGE_KEY_ACTIVE_SLEEP);
-    } catch {
-      // ignore
-    }
+    setActiveSleepStartUnified(null);
+    setIsEditingStartTimeOpen(false);
     setWakeModalOpen(false);
     setPendingEndSession(null);
   };
@@ -1066,10 +1211,80 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
       notes: manualNotes.trim() || undefined,
     };
 
-    setSessions((prev) => [newSession, ...prev]);
+    setSessions((prev) =>
+      [newSession, ...prev].sort(
+        (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+      )
+    );
     setShowManualForm(false);
     setManualNotes('');
     showToast(texts.toastSessionAdded);
+  };
+
+  // Open modal to edit an existing saved sleep session
+  const handleOpenEditModal = (session: SleepSession) => {
+    triggerHaptic('light');
+    const startD = new Date(session.startTime);
+    const endD = new Date(session.endTime);
+    setEditingSession(session);
+    setEditDate(toLocalDateStr(startD));
+    setEditStartTime(toLocalTimeStr(startD));
+    setEditEndTime(toLocalTimeStr(endD));
+    setEditType(session.type);
+    setEditQuality(session.quality);
+    setEditNotes(session.notes || '');
+  };
+
+  // Save changes to an existing sleep session
+  const handleSaveEditedSession = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSession) return;
+    triggerHaptic('medium');
+
+    const startDateTime = new Date(`${editDate}T${editStartTime}:00`);
+    let endDateTime = new Date(`${editDate}T${editEndTime}:00`);
+
+    if (endDateTime.getTime() <= startDateTime.getTime()) {
+      endDateTime = new Date(endDateTime.getTime() + 24 * 3600 * 1000);
+    }
+
+    const durationMinutes = Math.max(
+      1,
+      Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000)
+    );
+
+    setSessions((prev) =>
+      prev
+        .map((item) =>
+          item.id === editingSession.id
+            ? {
+                ...item,
+                startTime: startDateTime.toISOString(),
+                endTime: endDateTime.toISOString(),
+                durationMinutes,
+                type: editType,
+                quality: editQuality,
+                notes: editNotes.trim() || undefined,
+              }
+            : item
+        )
+        .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+    );
+
+    setEditingSession(null);
+    showToast(texts.toastSessionUpdated);
+  };
+
+  // Compute live preview duration for Edit modal
+  const getEditDurationPreview = () => {
+    if (!editDate || !editStartTime || !editEndTime) return 0;
+    const startDateTime = new Date(`${editDate}T${editStartTime}:00`);
+    let endDateTime = new Date(`${editDate}T${editEndTime}:00`);
+    if (Number.isNaN(startDateTime.getTime()) || Number.isNaN(endDateTime.getTime())) return 0;
+    if (endDateTime.getTime() <= startDateTime.getTime()) {
+      endDateTime = new Date(endDateTime.getTime() + 24 * 3600 * 1000);
+    }
+    return Math.max(1, Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000));
   };
 
   // Delete a session
@@ -1278,11 +1493,51 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
 
         {/* Live timer display or Idle status */}
         {activeSleepStart ? (
-          <div className="flex flex-col items-center justify-center py-4 text-center">
-            <span className="text-xs text-indigo-200/70 mb-1">
-              {texts.fellAsleepAt}{' '}
-              {new Date(activeSleepStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
+          <div className="flex flex-col items-center justify-center py-3 text-center">
+            <button
+              type="button"
+              onClick={handleToggleEditStartTime}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 text-xs text-indigo-100 mb-2 transition-all active:scale-95 touch-manipulation"
+              title={texts.editStartTimeBtn}
+            >
+              <span>
+                {texts.fellAsleepAt}{' '}
+                <strong className="text-amber-300 font-semibold">
+                  {new Date(activeSleepStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </strong>
+              </span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-amber-300 transition-transform duration-200 ${
+                  isEditingStartTimeOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {/* Exact start time editor for ongoing sleep */}
+            {isEditingStartTimeOpen && (
+              <div className="w-full mb-3 p-3 rounded-2xl bg-slate-950/85 border border-indigo-400/30 flex flex-col gap-2 text-left shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+                <label className="text-[10px] uppercase tracking-wider text-indigo-200/70 font-semibold block">
+                  {texts.customStartTimeLabel}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="time"
+                    value={customStartTimeInput}
+                    onChange={(e) => setCustomStartTimeInput(e.target.value)}
+                    className="flex-1 h-9 px-3 rounded-xl bg-slate-900 border border-white/15 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCustomStartTime}
+                    className="h-9 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs flex items-center gap-1 active:scale-95 transition-all shrink-0"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{texts.applyBtn}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white font-mono drop-shadow">
               {formatLiveClock(activeElapsedSec)}
             </div>
@@ -1728,13 +1983,27 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => handleDeleteSession(s.id)}
-                      className="p-2 rounded-xl text-white/30 hover:text-red-400 hover:bg-red-500/10 active:scale-95 transition-all shrink-0"
-                      title={texts.deleteTitle}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(s)}
+                        className="p-2 rounded-xl text-white/40 hover:text-amber-300 hover:bg-amber-400/10 active:scale-95 transition-all shrink-0"
+                        title={texts.editTitle}
+                        aria-label={texts.editTitle}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSession(s.id)}
+                        className="p-2 rounded-xl text-white/30 hover:text-red-400 hover:bg-red-500/10 active:scale-95 transition-all shrink-0"
+                        title={texts.deleteTitle}
+                        aria-label={texts.deleteTitle}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -1879,6 +2148,158 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({ la
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Edit Saved Sleep Session Modal */}
+      {editingSession && (
+        <div
+          onClick={() => setEditingSession(null)}
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+        >
+          <form
+            onSubmit={handleSaveEditedSession}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-3xl bg-slate-900 border border-white/20 p-5 flex flex-col gap-3.5 shadow-2xl animate-in zoom-in-95 duration-200"
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-amber-400" />
+                <span>{texts.editSessionModalTitle}</span>
+              </h3>
+              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-white/10 text-amber-300 font-bold">
+                {formatDuration(getEditDurationPreview())}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-1">
+                <label className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">
+                  {texts.date}
+                </label>
+                <input
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="w-full px-2 py-1.5 rounded-xl bg-slate-950 border border-white/15 text-xs text-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">
+                  {texts.from}
+                </label>
+                <input
+                  type="time"
+                  value={editStartTime}
+                  onChange={(e) => setEditStartTime(e.target.value)}
+                  className="w-full px-2 py-1.5 rounded-xl bg-slate-950 border border-white/15 text-xs text-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">
+                  {texts.to}
+                </label>
+                <input
+                  type="time"
+                  value={editEndTime}
+                  onChange={(e) => setEditEndTime(e.target.value)}
+                  className="w-full px-2 py-1.5 rounded-xl bg-slate-950 border border-white/15 text-xs text-white"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Type */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setEditType('day-nap')}
+                className={`flex-1 py-2 px-2 rounded-xl text-xs font-medium border flex items-center justify-center gap-1.5 transition-colors ${
+                  editType === 'day-nap'
+                    ? 'bg-amber-400 text-slate-950 border-amber-300 font-bold'
+                    : 'bg-white/5 border-white/10 text-white/70'
+                }`}
+              >
+                <Sun className="w-3.5 h-3.5" />
+                <span>{texts.dayNap}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setEditType('night-sleep')}
+                className={`flex-1 py-2 px-2 rounded-xl text-xs font-medium border flex items-center justify-center gap-1.5 transition-colors ${
+                  editType === 'night-sleep'
+                    ? 'bg-indigo-500 text-white border-indigo-400 font-bold'
+                    : 'bg-white/5 border-white/10 text-white/70'
+                }`}
+              >
+                <Moon className="w-3.5 h-3.5" />
+                <span>{texts.nightSleep}</span>
+              </button>
+            </div>
+
+            {/* Quality */}
+            <div>
+              <label className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">
+                {texts.qualityLabel}
+              </label>
+              <div className="grid grid-cols-3 gap-1.5 text-xs">
+                {(['peaceful', 'normal', 'restless'] as SleepQuality[]).map((q) => (
+                  <button
+                    key={q}
+                    type="button"
+                    onClick={() => setEditQuality(q)}
+                    className={`py-2 px-1 rounded-xl text-center border text-[11px] font-medium transition-colors ${
+                      editQuality === q
+                        ? 'bg-white/20 border-white/40 text-white font-bold'
+                        : 'bg-white/5 border-white/10 text-white/60'
+                    }`}
+                  >
+                    {getQualityText(q)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="text-[10px] uppercase tracking-wider text-white/50 block mb-1">
+                {texts.notePlaceholder}
+              </label>
+              <input
+                type="text"
+                placeholder={texts.noteModalPlaceholder}
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                maxLength={100}
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-white/15 text-xs text-white placeholder-white/30"
+              />
+            </div>
+
+            <div className="flex gap-2 mt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setEditingSession(null);
+                }}
+                className="py-2.5 px-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white/70 font-semibold text-xs active:scale-95 transition-all"
+              >
+                {texts.cancelBtn}
+              </button>
+
+              <button
+                type="submit"
+                className="flex-1 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs shadow-md active:scale-95 transition-all"
+              >
+                {texts.saveSessionBtn}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

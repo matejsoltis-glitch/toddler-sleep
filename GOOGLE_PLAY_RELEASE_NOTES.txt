@@ -1,7 +1,7 @@
 ================================================================================
 POZNÁMKY K VYDANIU PRE GOOGLE PLAY CONSOLE (RELEASE NOTES)
 Aplikácia: Toddler Sleep Assistant
-Verzia: v1.0.1 (versionCode: 2, versionName: "1.0.1")
+Verzia: v1.0.2 (versionCode: 4, versionName: "1.0.2")
 ================================================================================
 
 Tento súbor obsahuje pripravené texty noviniek (What's new in this release)
@@ -12,98 +12,128 @@ MOŽNOSŤ A: Skopírovať celú sekciu s XML tagmi <sk-SK>, <en-US> atď. priamo
 MOŽNOSŤ B: Skopírovať čistý text pre jednotlivé jazyky v konzole.
 
 --------------------------------------------------------------------------------
-MOŽNOSŤ A: FORMÁT S JAZYKOVÝMI ZNAČKAMI PRE GOOGLE PLAY CONSOLE (v1.0.1)
+MOŽNOSŤ A: FORMÁT S JAZYKOVÝMI ZNAČKAMI PRE GOOGLE PLAY CONSOLE (v1.0.2)
 (Skopírujte celý blok nižšie priamo do poľa "Poznámky k vydaniu")
 --------------------------------------------------------------------------------
 
+<sk-SK>
+Verzia 1.0.2:
+• Režimy zobrazenia: Farebný, plynulý Lite (pre staršie mobily) a Čiernobiely (odtiene sivej)
+• Úprava uložených spánkov v histórii a času zaspatia počas prebiehajúceho spánku
+• Časovač spánku z režimu 4 priamo v hornej lište aplikácie
+• Vylepšený denný/nočný režim, zalamovanie tlačidla menu a Android Immersive fullscreen
+</sk-SK>
+<cs-CZ>
+Verze 1.0.2:
+• Režimy zobrazení: Barevný, plynulý Lite (pro starší mobily) a Černobílý (odstíny šedi)
+• Úprava uložených spánků v historii i času usnutí během probíhajícího spánku
+• Časovač spánku z režimu 4 přímo v horní liště aplikace
+• Vylepšený denní/noční režim, zalamování tlačítka menu a Android Immersive fullscreen
+</cs-CZ>
+<en-US>
+Version 1.0.2:
+• Display modes: Full Color, smooth Lite (for older phones), and Black & White (grayscale)
+• Edit saved sleep records and adjust exact start time during active sleep tracking
+• Live Mode 4 sleep timer displayed in the top header
+• Enhanced Day/Night mode, responsive menu button wrapping, and Android Immersive fullscreen
+</en-US>
+<pl-PL>
+Wersja 1.0.2:
+• Tryby wyświetlania: Kolorowy, płynny Lite (dla starszych telefonów) i Czarno-biały
+• Edycja zapisanych snów w historii oraz godziny zaśnięcia w trakcie trwającego snu
+• Stoper czasu snu z trybu 4 bezpośrednio na górnym pasku
+• Ulepszony tryb dzień/noc, zawijanie przycisku menu i pełny ekran Immersive w Androidzie
+</pl-PL>
+<hu-HU>
+1.0.2-es verzió:
+• Megjelenítési módok: Színes, gyors Lite (régebbi telefonokra) és Fekete-fehér
+• Mentett alvások és az aktív alvás kezdési idejének szerkesztése
+• Élő alvásidő-mérő közvetlenül a felső fejlécben
+• Javított nappali/éjszakai mód, többsoros menü gomb és Android Immersive teljes képernyő
+</hu-HU>
+<uk-UA>
+Версія 1.0.2:
+• Режими відображення: Кольоровий, плавний Lite (для старіших телефонів) і Чорно-білий
+• Редагування збережених записів сну та часу засинання під час активного сну
+• Таймер тривалості сну з режиму 4 безпосередньо у верхній панелі
+• Покращений денний/нічний режим та повноекранний Immersive режим для Android
+</uk-UA>
+<it-IT>
+Versione 1.0.2:
+• Modalità di visualizzazione: A colori, Lite fluida (per telefoni datati) e Bianco e nero
+• Modifica delle sessioni di sonno salvate e dell'ora di inizio durante il sonno attivo
+• Timer live del sonno dalla modalità 4 direttamente nella barra superiore
+• Modalità Giorno/Notte migliorata e schermo intero Immersive Sticky su Android
+</it-IT>
+
+--------------------------------------------------------------------------------
+MOŽNOSŤ B: ČISTÉ TEXTY PRE JEDNOTLIVÉ JAZYKY (KOPÍROVAŤ ZVLÁŠŤ) (v1.0.2)
+--------------------------------------------------------------------------------
+
+[SLOVENČINA (sk-SK)]
+Verzia 1.0.2:
+• Režimy zobrazenia: Farebný, plynulý Lite (pre staršie mobily) a Čiernobiely (odtiene sivej)
+• Úprava uložených spánkov v histórii a času zaspatia počas prebiehajúceho spánku
+• Časovač spánku z režimu 4 priamo v hornej lište aplikácie
+• Vylepšený denný/nočný režim, zalamovanie tlačidla menu a Android Immersive fullscreen
+
+[ČEŠTINA (cs-CZ)]
+Verze 1.0.2:
+• Režimy zobrazení: Barevný, plynulý Lite (pro starší mobily) a Černobílý (odstíny šedi)
+• Úprava uložených spánků v historii i času usnutí během probíhajícího spánku
+• Časovač spánku z režimu 4 přímo v horní liště aplikace
+• Vylepšený denní/noční režim, zalamování tlačítka menu a Android Immersive fullscreen
+
+[ENGLISH (en-US)]
+Version 1.0.2:
+• Display modes: Full Color, smooth Lite (for older phones), and Black & White (grayscale)
+• Edit saved sleep records and adjust exact start time during active sleep tracking
+• Live Mode 4 sleep timer displayed in the top header
+• Enhanced Day/Night mode, responsive menu button wrapping, and Android Immersive fullscreen
+
+[POLSKI (pl-PL)]
+Wersja 1.0.2:
+• Tryby wyświetlania: Kolorowy, płynny Lite (dla starszych telefonów) i Czarno-biały
+• Edycja zapisanych snów w historii oraz godziny zaśnięcia w trakcie trwającego snu
+• Stoper czasu snu z trybu 4 bezpośrednio na górnym pasku
+• Ulepszony tryb dzień/noc, zawijanie przycisku menu i pełny ekran Immersive w Androidzie
+
+[MAGYAR (hu-HU)]
+1.0.2-es verzió:
+• Megjelenítési módok: Színes, gyors Lite (régebbi telefonokra) és Fekete-fehér
+• Mentett alvások és az aktív alvás kezdési idejének szerkesztése
+• Élő alvásidő-mérő közvetlenül a felső fejlécben
+• Javított nappali/éjszakai mód, többsoros menü gomb és Android Immersive teljes képernyő
+
+[UKRAINIAN (uk-UA)]
+Версія 1.0.2:
+• Режими відображення: Кольоровий, плавний Lite (для старіших телефонів) і Чорно-білий
+• Редагування збережених записів сну та часу засинання під час активного сну
+• Таймер тривалості сну з режиму 4 безпосередньо у верхній панелі
+• Покращений денний/нічний режим та повноекранний Immersive режим для Android
+
+[ITALIANO (it-IT)]
+Versione 1.0.2:
+• Modalità di visualizzazione: A colori, Lite fluida (per telefoni datati) e Bianco e nero
+• Modifica delle sessioni di sonno salvate e dell'ora di inizio durante il sonno attivo
+• Timer live del sonno dalla modalità 4 direttamente nella barra superiore
+• Modalità Giorno/Notte migliorata e schermo intero Immersive Sticky su Android
+
+================================================================================
+HISTORICKÝ ARCHÍV: VERZIA v1.0.1 (versionCode: 3, versionName: "1.0.1")
+================================================================================
 <sk-SK>
 Verzia 1.0.1:
 • Oprava úvodnej obrazovky výberu jazyka: kompaktné rozloženie bez nutnosti scrollovania
 • Potvrdzovacie tlačidlo je bezpečne umiestnené nad systémovými tlačidlami Androidu
 • Vylepšená citlivosť ovládania a plynulosť prostredia
 </sk-SK>
-<cs-CZ>
-Verze 1.0.1:
-• Oprava úvodní obrazovky výběru jazyka: kompaktní rozložení bez nutnosti scrolování
-• Potvrzovací tlačítko je bezpečně umístěno nad systémovými tlačítky Androidu
-• Vylepšená citlivost ovládání a plynulost prostředí
-</cs-CZ>
 <en-US>
 Version 1.0.1:
 • Fixed language selection screen: compact responsive layout fitting without scrolling
 • Confirmation button is positioned safely above Android system navigation buttons
 • Smooth UI performance and touch optimizations
 </en-US>
-<pl-PL>
-Wersja 1.0.1:
-• Poprawa ekranu wyboru języka: kompaktowy układ bez konieczności przewijania
-• Przycisk potwierdzenia umieszczony bezpiecznie nad przyciskami systemowymi Androida
-• Lepsza responsywność i płynność interfejsu
-</pl-PL>
-<hu-HU>
-1.0.1-es verzió:
-• Nyelvválasztó képernyő javítása: kompakt elrendezés görgetés nélkül
-• A megerősítő gomb biztonságosan az Android navigációs gombok felett helyezkedik el
-• Finomhangolt érintésvezérlés és kezelőfelület
-</hu-HU>
-<uk-UA>
-Версія 1.0.1:
-• Виправлено екран вибору мови: компактний вигляд без потреби прокручування
-• Кнопка підтвердження безпечно розташована над системними кнопками Android
-• Покращена чутливість керування та плавність інтерфейсу
-</uk-UA>
-<it-IT>
-Versione 1.0.1:
-• Correzione della schermata di selezione lingua: layout compatto senza scorrimento
-• Pulsante di conferma posizionato in sicurezza sopra i pulsanti di sistema Android
-• Ottimizzazioni della risposta al tocco e interfaccia fluida
-</it-IT>
-
---------------------------------------------------------------------------------
-MOŽNOSŤ B: ČISTÉ TEXTY PRE JEDNOTLIVÉ JAZYKY (KOPÍROVAŤ ZVLÁŠŤ) (v1.0.1)
---------------------------------------------------------------------------------
-
-[SLOVENČINA (sk-SK)]
-Verzia 1.0.1:
-• Oprava úvodnej obrazovky výberu jazyka: kompaktné rozloženie bez nutnosti scrollovania
-• Potvrdzovacie tlačidlo je bezpečne umiestnené nad systémovými tlačidlami Androidu
-• Vylepšená citlivosť ovládania a plynulosť prostredia
-
-[ČEŠTINA (cs-CZ)]
-Verze 1.0.1:
-• Oprava úvodní obrazovky výběru jazyka: kompaktní rozložení bez nutnosti scrolování
-• Potvrzovací tlačítko je bezpečně umístěno nad systémovými tlačítky Androidu
-• Vylepšená citlivost ovládání a plynulost prostředí
-
-[ENGLISH (en-US)]
-Version 1.0.1:
-• Fixed language selection screen: compact responsive layout fitting without scrolling
-• Confirmation button is positioned safely above Android system navigation buttons
-• Smooth UI performance and touch optimizations
-
-[POLSKI (pl-PL)]
-Wersja 1.0.1:
-• Poprawa ekranu wyboru języka: kompaktowy układ bez konieczności przewijania
-• Przycisk potwierdzenia umieszczony bezpiecznie nad przyciskami systemowymi Androida
-• Lepsza responsywność i płynność interfejsu
-
-[MAGYAR (hu-HU)]
-1.0.1-es verzió:
-• Nyelvválasztó képernyő javítása: kompakt elrendezés görgetés nélkül
-• A megerősítő gomb biztonságosan az Android navigációs gombok felett helyezkedik el
-• Finomhangolt érintésvezérlés és kezelőfelület
-
-[UKRAINIAN (uk-UA)]
-Версія 1.0.1:
-• Виправлено екран вибору мови: компактний вигляд без потреби прокручування
-• Кнопка підтвердження безпечно розташована над системними кнопками Android
-• Покращена чутливість керування та плавність інтерфейсу
-
-[ITALIANO (it-IT)]
-Versione 1.0.1:
-• Correzione della schermata di selezione lingua: layout compatto senza scorrimento
-• Pulsante di conferma posizionato in sicurezza sopra i pulsanti di sistema Android
-• Ottimizzazioni della risposta al tocco e interfaccia fluida
 
 ================================================================================
 HISTORICKÝ ARCHÍV: VERZIA v1.0 (versionCode: 1, versionName: "1.0")

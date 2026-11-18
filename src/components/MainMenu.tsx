@@ -21,6 +21,7 @@ interface MainMenuProps {
   onChangeBrightness: (brightness: number) => void;
   componentsOpacity: number;
   onChangeComponentsOpacity: (opacity: number) => void;
+  isScheduleActive?: boolean;
 }
 
 export const MainMenu: React.FC<MainMenuProps> = ({
@@ -38,6 +39,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onChangeBrightness,
   componentsOpacity,
   onChangeComponentsOpacity,
+  isScheduleActive = false,
 }) => {
   const t = translations[language];
 
@@ -99,7 +101,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       icon: Calendar,
       gradient: 'from-violet-500/20 via-purple-500/15 to-indigo-500/10 border-violet-500/30 text-violet-300',
       iconBg: 'bg-violet-400 text-slate-950 shadow-violet-400/30',
-      isActive: false,
+      isActive: Boolean(isScheduleActive),
       activeBadge: t.modes.schedule?.activeBadge || 'Aktívny',
     },
   ];

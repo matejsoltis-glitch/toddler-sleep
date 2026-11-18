@@ -5,14 +5,25 @@ A calming sleep companion app for babies and toddlers featuring soothing multi-s
 ---
 ## Version History & Changelog
 
-### v1.0.1 (Latest)
+### v1.0.2 (Latest)
+- **App Color Modes (`Color`, `Lite`, `Black & White`)**: Added a 3-way visual mode selector in Settings with a gentle, eye-safe radial mist transition:
+  - **Color**: Full atmospheric glow, frosted backdrop blur cards, and animated liquid wave sliders.
+  - **Lite**: Keeps full color while disabling heavy `backdrop-blur` passes, large blur shaders, and continuous idle animations for silky-smooth lag-free performance on older devices.
+  - **Black & White**: Converts the entire application into calm, high-contrast shades of gray.
+- **Sleep History Editing & Ongoing Start-Time Adjustment**: Parents can now edit saved sleep sessions (date, start/end times with automatic midnight span handling, type, quality, notes) as well as modify the exact falling-asleep time directly during an active sleep session.
+- **Live Mode 4 Sleep Timer in Header**: When sleep tracking in Mode 4 is active, an interactive elapsed sleep duration pill appears in the top header between the battery indicator and child lock for one-tap access.
+- **Adaptive Header Button Wrapping**: The Main Menu button in the header automatically wraps words onto stacked lines across all 7 languages on narrow screens instead of truncating with ellipsis.
+- **Day / Night Mode & Onboarding Refinements**: Night mode automatically lowers both brightness (25%) and component opacity (35%) while Day mode restores full contrast (85% / 100%); added language flags to the onboarding selector and streamlined Settings.
+- **Android Build v1.0.2 (Release 4)**: Configured `versionName "1.0.2"` / `versionCode 4` in `.github/workflows/main.yml`, added automated mipmap icon generation from `assets/icon.png`, and enforced Immersive Sticky fullscreen mode in `MainActivity.java` for both modern and legacy Android versions.
+
+### v1.0.1
 - **Language Onboarding Layout & Safe-Area Fix**: Redesigned the language selection onboarding modal into an ergonomic 2-column responsive grid that fits 100% within the viewport without requiring users to scroll.
 - **Android System Navigation Clearance**: Positioned the "Continue to Application" confirmation button safely above Android 3-button system navigation bars (Back, Home, Recents) with robust `safe-area-inset-bottom` padding, resolving tap blockage on all Android device screen sizes.
   
 ### v1.0
 - **Refined Mobile Layout Geometry**: Halved footer height (`py-1.5`) for a minimalist bottom bar, established an exact 2mm spacing between the sleep timer module and the footer, and trimmed 2mm from the top header padding (`pt-[6mm]`) for optimal screen utilization.
 - **Complete Main Menu Button Localization**: Fully localized the "Back to main menu" navigation button, tooltips, and aria-labels across Slovak, Czech, English, Polish, Hungarian, Ukrainian, and Italian.
-- **Interactive In-App Changelog Modal**: Tapping the version badge (`v1.0.1`) in the footer opens an interactive, scrollable modal displaying the complete version history, release notes, and latest features.
+- **Interactive In-App Changelog Modal**: Tapping the version badge (`v1.0.2`) in the footer opens an interactive, scrollable modal displaying the complete version history, release notes, and latest features.
 - **Author Notice & Feedback Modal**: Tapping the author's name ("Autor: Matej Šoltis") displays a localized message for parents with direct email feedback contact (`msglitchapps@gmail.com`) and one-tap copy functionality.
 - **Official v1.0 Android Release Configuration**: Synchronized version 1.0 across `package.json`, root `capacitor.config.json`, and the GitHub Actions Android build workflow (`versionName "1.0"` / `versionCode 1`).
 

@@ -93,10 +93,10 @@ jobs:
             vg = vg.replace(/targetSdkVersion\s*=\s*[0-9]+/g, "targetSdkVersion = 36");
             fs.writeFileSync("android/variables.gradle", vg);
 
-            // 3. Nastavenie verzie 1.0.1 a versionCode 3
+            // 3. Nastavenie verzie 1.0.2 a versionCode 4
             let bg = fs.readFileSync("android/app/build.gradle", "utf8");
-            bg = bg.replace(/versionCode\s+[0-9]+/g, "versionCode 3");
-            bg = bg.replace(/versionName\s+"[^"]+"/g, "versionName \"1.0.1\"");
+            bg = bg.replace(/versionCode\s+[0-9]+/g, "versionCode 4");
+            bg = bg.replace(/versionName\s+"[^"]+"/g, "versionName \"1.0.2\"");
             fs.writeFileSync("android/app/build.gradle", bg);
 
             // 4. Potlačenie AGP kontroly pre SDK 36

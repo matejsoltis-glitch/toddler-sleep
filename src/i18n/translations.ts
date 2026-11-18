@@ -199,6 +199,14 @@ export interface Translations {
     dimZero: string;
     dimMax: string;
     saveClose: string;
+    colorModeHeading: string;
+    colorModeDesc: string;
+    colorModeColor: string;
+    colorModeLite: string;
+    colorModeGrayscale: string;
+    colorModeColorBadge: string;
+    colorModeLiteBadge: string;
+    colorModeGrayscaleBadge: string;
   };
   palettes: {
     warmSunset: { name: string; desc: string; mood: string };
@@ -430,6 +438,14 @@ export const translations: Record<Language, Translations> = {
       dimZero: '0% (Standard)',
       dimMax: '75% (Maximum dimming)',
       saveClose: 'Save & Close',
+      colorModeHeading: 'App Color Mode',
+      colorModeDesc: 'Choose full color display, performance-friendly Lite mode for older phones, or calm shades of gray.',
+      colorModeColor: 'Color',
+      colorModeLite: 'Lite',
+      colorModeGrayscale: 'Black & White',
+      colorModeColorBadge: 'Active: Color',
+      colorModeLiteBadge: 'Active: Lite',
+      colorModeGrayscaleBadge: 'Active: B&W',
     },
     palettes: {
       warmSunset: {
@@ -691,6 +707,14 @@ export const translations: Record<Language, Translations> = {
       dimZero: '0% (Štandard)',
       dimMax: '75% (Maximum stmavenia)',
       saveClose: 'Uložiť a zavrieť',
+      colorModeHeading: 'Farebný režim aplikácie',
+      colorModeDesc: 'Vyberte plnofarebný režim, plynulý režim Lite s menej efektami pre staršie telefóny alebo odtiene sivej.',
+      colorModeColor: 'Farebný',
+      colorModeLite: 'Lite',
+      colorModeGrayscale: 'Čiernobiely',
+      colorModeColorBadge: 'Aktuálne: Farebný',
+      colorModeLiteBadge: 'Aktuálne: Lite',
+      colorModeGrayscaleBadge: 'Aktuálne: Čiernobiely',
     },
     palettes: {
       warmSunset: {
@@ -952,6 +976,14 @@ export const translations: Record<Language, Translations> = {
       dimZero: '0% (Standard)',
       dimMax: '75% (Maximum ztmavení)',
       saveClose: 'Uložit a zavřít',
+      colorModeHeading: 'Barevný režim aplikace',
+      colorModeDesc: 'Vyberte plnobarevný režim, plynulý režim Lite s méně efekty pro starší telefony nebo odstíny šedi.',
+      colorModeColor: 'Barevný',
+      colorModeLite: 'Lite',
+      colorModeGrayscale: 'Černobílý',
+      colorModeColorBadge: 'Aktuálně: Barevný',
+      colorModeLiteBadge: 'Aktuálně: Lite',
+      colorModeGrayscaleBadge: 'Aktuálně: Černobílý',
     },
     palettes: {
       warmSunset: {
@@ -1213,6 +1245,14 @@ export const translations: Record<Language, Translations> = {
       dimZero: '0% (Standard)',
       dimMax: '75% (Maksymalne przyciemnienie)',
       saveClose: 'Zapisz i zamknij',
+      colorModeHeading: 'Tryb kolorów aplikacji',
+      colorModeDesc: 'Wybierz pełny kolor, płynny tryb Lite z mniejszą liczbą efektów dla starszych telefonów lub odcienie szarości.',
+      colorModeColor: 'Kolorowy',
+      colorModeLite: 'Lite',
+      colorModeGrayscale: 'Czarno-biały',
+      colorModeColorBadge: 'Aktywny: Kolorowy',
+      colorModeLiteBadge: 'Aktywny: Lite',
+      colorModeGrayscaleBadge: 'Aktywny: Czarno-biały',
     },
     palettes: {
       warmSunset: {
@@ -1474,6 +1514,14 @@ export const translations: Record<Language, Translations> = {
       dimZero: '0% (Alapértelmezett)',
       dimMax: '75% (Maximális sötétítés)',
       saveClose: 'Mentés és bezárás',
+      colorModeHeading: 'Alkalmazás színmódja',
+      colorModeDesc: 'Válasszon teljes színes módot, kevesebb effektet használó Lite módot régebbi telefonokra vagy szürkeárnyalatot.',
+      colorModeColor: 'Színes',
+      colorModeLite: 'Lite',
+      colorModeGrayscale: 'Fekete-fehér',
+      colorModeColorBadge: 'Aktív: Színes',
+      colorModeLiteBadge: 'Aktív: Lite',
+      colorModeGrayscaleBadge: 'Aktív: Fekete-fehér',
     },
     palettes: {
       warmSunset: {
@@ -1735,6 +1783,14 @@ export const translations: Record<Language, Translations> = {
       dimZero: '0% (Звичайна)',
       dimMax: '75% (Максимальне затемнення)',
       saveClose: 'Зберегти і закрити',
+      colorModeHeading: 'Колірний режим додатку',
+      colorModeDesc: 'Оберіть повноколірний режим, плавний режим Lite з мінімумом ефектів для старіших телефонів або відтінки сірого.',
+      colorModeColor: 'Кольоровий',
+      colorModeLite: 'Lite',
+      colorModeGrayscale: 'Чорно-білий',
+      colorModeColorBadge: 'Зараз: Кольоровий',
+      colorModeLiteBadge: 'Зараз: Lite',
+      colorModeGrayscaleBadge: 'Зараз: Чорно-білий',
     },
     palettes: {
       warmSunset: {
@@ -1996,6 +2052,14 @@ export const translations: Record<Language, Translations> = {
       dimZero: '0% (Standard)',
       dimMax: '75% (Oscuramento massimo)',
       saveClose: 'Salva e chiudi',
+      colorModeHeading: "Modalità colore dell'app",
+      colorModeDesc: 'Scegli la modalità a colori, Lite ad alte prestazioni per telefoni meno recenti o tonalità di grigio.',
+      colorModeColor: 'A colori',
+      colorModeLite: 'Lite',
+      colorModeGrayscale: 'Bianco e nero',
+      colorModeColorBadge: 'Attivo: A colori',
+      colorModeLiteBadge: 'Attivo: Lite',
+      colorModeGrayscaleBadge: 'Attivo: Bianco e nero',
     },
     palettes: {
       warmSunset: {

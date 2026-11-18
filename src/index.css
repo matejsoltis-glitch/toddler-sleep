@@ -210,3 +210,122 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
   border: 2px solid rgba(255, 255, 255, 0.8);
 }
+
+/* Smooth dual-layer radial mist & bloom sweep when switching Color / Lite / Black & White modes (2400ms, centered & eye-safe) */
+@keyframes bw-wave-expand {
+  0% {
+    opacity: 0;
+    transform: scale(0.18);
+  }
+  25% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+
+@keyframes bw-wave-echo {
+  0% {
+    opacity: 0;
+    transform: scale(0.12);
+  }
+  28% {
+    opacity: 0.42;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+@keyframes bw-ambient-bloom {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.14;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-bw-wave {
+  animation: bw-wave-expand 2400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+.animate-bw-echo {
+  animation: bw-wave-echo 2200ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+  will-change: transform, opacity;
+}
+
+.animate-bw-bloom {
+  animation: bw-ambient-bloom 2320ms ease-in-out both;
+  will-change: opacity;
+}
+
+/* LITE MODE: High-performance mode eliminating heavy blurs, infinite loops & large shadows on older devices */
+@keyframes mode-enter-lite {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 4px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.app-lite *:not(.grayscale-master-overlay),
+.app-lite *::before,
+.app-lite *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.app-lite [class*="bg-slate-9"][class*="backdrop-blur"] {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+}
+
+.app-lite [class*="bg-black/"][class*="backdrop-blur"] {
+  background-color: rgba(3, 7, 18, 0.88) !important;
+}
+
+.app-lite [class*="blur-3xl"],
+.app-lite [class*="blur-2xl"],
+.app-lite [class*="blur-xl"] {
+  filter: none !important;
+  opacity: 0.14 !important;
+}
+
+.app-lite .mix-blend-screen {
+  mix-blend-mode: normal !important;
+}
+
+.app-lite .animate-liquid-fast,
+.app-lite .animate-liquid-active,
+.app-lite .animate-liquid-slow,
+.app-lite .animate-liquid-slow-active,
+.app-lite .animate-soft-halo,
+.app-lite .animate-spin-slow,
+.app-lite .animate-rhythmic-breathing,
+.app-lite .animate-ping,
+.app-lite .animate-pulse {
+  animation: none !important;
+}
+
+.app-lite .animate-mode-enter {
+  animation: mode-enter-lite 180ms ease-out both !important;
+  filter: none !important;
+}
+
+.app-lite [class*="shadow-2xl"],
+.app-lite [class*="shadow-xl"],
+.app-lite [class*="shadow-lg"] {
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35) !important;
+}
+
+

@@ -37,6 +37,8 @@ export interface TimerConfig {
   isFadeEnabled: boolean;
 }
 
+export type ColorMode = 'color' | 'lite' | 'grayscale';
+
 export interface NightModeState {
   isAutoSunset: boolean;
   isAfterSunset: boolean;

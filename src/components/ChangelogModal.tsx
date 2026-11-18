@@ -18,8 +18,59 @@ interface ReleaseEntry {
 
 const RELEASES: ReleaseEntry[] = [
   {
-    version: 'v1.0.1',
+    version: 'v1.0.2',
     isLatest: true,
+    highlights: {
+      sk: [
+        'Nové farebné režimy v nastaveniach: Farebný, plynulý Lite (pre staršie telefóny) a Čiernobiely (odtiene sivej) s jemným prechodom šetrným pre oči.',
+        'Úprava uložených spánkov v histórii (dátum, čas od/do, typ, kvalita a poznámky) aj úprava presného času zaspatia počas prebiehajúceho spánku.',
+        'Živý časovač spánku z režimu 4 zobrazený priamo v hornej hlavičke medzi batériou a detským zámkom.',
+        'Automatické zalamovanie textu tlačidla Hlavné menu do dvoch riadkov na užších obrazovkách vo všetkých 7 jazykoch.',
+        'Vylepšený Denný / Nočný režim s logickým znížením jasu a priehľadnosti v noci, čistejšie nastavenia a vlajočky pri výbere jazyka.',
+        'Android: pridaná podpora ikony aplikácie a vynútený Immersive Sticky režim pre skrytie systémových líšt aj na starších zariadeniach.',
+      ],
+      cs: [
+        'Nové barevné režimy v nastavení: Barevný, plynulý Lite (pro starší telefony) a Černobílý (odstíny šedi) s jemným přechodem.',
+        'Úprava uložených spánků v historii i úprava přesného času usnutí během probíhajícího spánku.',
+        'Živý časovač spánku z režimu 4 v horní liště mezi baterií a dětským zámkem.',
+        'Automatické zalamování textu tlačítka Hlavní menu na užších obrazovkách ve všech 7 jazycích.',
+        'Vylepšený Denní / Noční režim se snížením jasu i průhlednosti a vynucený Immersive Sticky režim na Androidu.',
+      ],
+      en: [
+        'New Color Modes in Settings: Full Color, high-performance Lite (smooth on older phones), and Black & White (grayscale) with a gentle eye-safe transition.',
+        'Edit saved sleep records in Sleep History and adjust exact falling-asleep time during an ongoing sleep session.',
+        'Live Mode 4 sleep duration timer displayed directly in the top header between Battery and Child Lock.',
+        'Automatic multi-line wrapping for the Main Menu header button across all 7 languages on narrow screens.',
+        'Upgraded Day / Night mode adjusting both brightness & opacity, cleaner Settings, language flags, Android app icon & Immersive Sticky fullscreen.',
+      ],
+      pl: [
+        'Nowe tryby kolorów: Kolorowy, płynny Lite (dla starszych telefonów) oraz Czarno-biały (odcienie szarości) z delikatnym przejściem.',
+        'Edycja zapisanych wpisów snu w historii oraz korekta dokładnej godziny zaśnięcia w trakcie trwającego snu.',
+        'Stoper czasu trwania snu z trybu 4 w górnym pasku między baterią a blokadą dziecięcą.',
+        'Automatyczne zawijanie tekstu przycisku Menu główne na węższych ekranach oraz tryb Immersive Sticky na Androidzie.',
+      ],
+      hu: [
+        'Új színmódok a beállításokban: Színes, gyors Lite (régebbi telefonokra) és Fekete-fehér szürkeárnyalat kíméletes átmenettel.',
+        'Mentett alvások szerkesztése az előzményekben és pontos elalvási idő módosítása folyamatban lévő alvásnál.',
+        'Élő alvásidő-mérő a felső fejlécben az akkumulátor és a gyerekzár között.',
+        'Többsoros főmenü gomb keskeny kijelzőkön, finomhangolt éjszakai fényerő/átlátszóság és Android Immersive Sticky teljes képernyő.',
+      ],
+      uk: [
+        'Нові колірні режими: Кольоровий, швидкий Lite (для старіших телефонів) та Чорно-білий (відтінки сірого) з плавним переходом.',
+        'Редагування збережених записів сну в історії та точного часу засинання під час активного сну.',
+        'Таймер тривалості сну з режиму 4 у верхній панелі між батареєю та дитячим замком.',
+        'Перенесення тексту кнопки Головне меню на вузьких екранах та примусовий Immersive Sticky режим для Android.',
+      ],
+      it: [
+        'Nuove modalità colore: A colori, Lite ad alte prestazioni (per telefoni meno recenti) e Bianco e nero con transizione delicata.',
+        'Modifica delle sessioni di sonno salvate e regolazione dell\'ora esatta di addormentamento durante il sonno in corso.',
+        'Timer live del sonno nella barra superiore tra batteria e blocco bimbo.',
+        'Testo del pulsante Menu principale adattabile su più righe, modalità Giorno/Notte migliorata e Immersive Sticky su Android.',
+      ],
+    },
+  },
+  {
+    version: 'v1.0.1',
     highlights: {
       sk: [
         'Oprava obrazovky výberu jazyka: nové kompaktné rozloženie bez nutnosti scrollovania.',
@@ -257,7 +308,7 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
                 {t.changelogModal?.title || 'História verzií a novinky'}
               </h2>
               <span className="text-[11px] text-amber-300/80 font-mono">
-                Aktuálna verzia: v1.0.1
+                Aktuálna verzia: v1.0.2
               </span>
             </div>
           </div>
