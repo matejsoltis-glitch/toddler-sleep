@@ -48,15 +48,16 @@ jobs:
             exit 1
           fi
 
-          if ! keytool -list -keystore /tmp/check.keystore -storepass "$STORE_PASS" >/dev/null 2>&1; then
+          if ! KT_PASS="$STORE_PASS" keytool -list -keystore /tmp/check.keystore -storepass:env KT_PASS >/dev/null 2>&1; then
             TRIMMED_PASS="$(printf '%s' "$STORE_PASS" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-            if [ -n "$TRIMMED_PASS" ] && keytool -list -keystore /tmp/check.keystore -storepass "$TRIMMED_PASS" >/dev/null 2>&1; then
+            if [ -n "$TRIMMED_PASS" ] && KT_PASS="$TRIMMED_PASS" keytool -list -keystore /tmp/check.keystore -storepass:env KT_PASS >/dev/null 2>&1; then
               STORE_PASS="$TRIMMED_PASS"
             else
               echo "::error::Secret STORE_PASSWORD nesedí s keystore v KEYSTORE_BASE64. Skontroluj v GitHub Settings -> Secrets presnú hodnotu STORE_PASSWORD a KEYSTORE_BASE64."
               exit 1
             fi
           fi
+          echo "::add-mask::$STORE_PASS"
 
           ALIAS_VAL="$(printf '%s' "$KEY_ALIAS" | tr -d '\r\n')"
           if [ -z "$ALIAS_VAL" ]; then
@@ -64,15 +65,16 @@ jobs:
             exit 1
           fi
 
-          if ! keytool -list -keystore /tmp/check.keystore -storepass "$STORE_PASS" -alias "$ALIAS_VAL" >/dev/null 2>&1; then
+          if ! KT_PASS="$STORE_PASS" keytool -list -keystore /tmp/check.keystore -storepass:env KT_PASS -alias "$ALIAS_VAL" >/dev/null 2>&1; then
             TRIMMED_ALIAS="$(printf '%s' "$ALIAS_VAL" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-            if [ -n "$TRIMMED_ALIAS" ] && keytool -list -keystore /tmp/check.keystore -storepass "$STORE_PASS" -alias "$TRIMMED_ALIAS" >/dev/null 2>&1; then
+            if [ -n "$TRIMMED_ALIAS" ] && KT_PASS="$STORE_PASS" keytool -list -keystore /tmp/check.keystore -storepass:env KT_PASS -alias "$TRIMMED_ALIAS" >/dev/null 2>&1; then
               ALIAS_VAL="$TRIMMED_ALIAS"
             else
               echo "::error::Secret KEY_ALIAS sa nenašiel v keystore. Skontroluj presný názov aliasu kľúča v GitHub Secrets."
               exit 1
             fi
           fi
+          echo "::add-mask::$ALIAS_VAL"
 
           echo "Keystore, heslo aj alias sú overené a sedia."
 
@@ -384,12 +386,12 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           STORE_PASS="$(printf '%s' "$STORE_PASSWORD" | tr -d '\r\n')"
-          if ! keytool -list -keystore app/release.keystore -storepass "$STORE_PASS" >/dev/null 2>&1; then
+          if ! KT_PASS="$STORE_PASS" keytool -list -keystore app/release.keystore -storepass:env KT_PASS >/dev/null 2>&1; then
             STORE_PASS="$(printf '%s' "$STORE_PASS" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
           fi
 
           ALIAS_VAL="$(printf '%s' "$KEY_ALIAS" | tr -d '\r\n')"
-          if ! keytool -list -keystore app/release.keystore -storepass "$STORE_PASS" -alias "$ALIAS_VAL" >/dev/null 2>&1; then
+          if ! KT_PASS="$STORE_PASS" keytool -list -keystore app/release.keystore -storepass:env KT_PASS -alias "$ALIAS_VAL" >/dev/null 2>&1; then
             ALIAS_VAL="$(printf '%s' "$ALIAS_VAL" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
           fi
 
@@ -398,6 +400,10 @@ jobs:
           if [ -z "$TRIMMED_KEY_PASS" ] || [ "$TRIMMED_KEY_PASS" = "$STORE_PASS" ]; then
             KEY_PASS="$STORE_PASS"
           fi
+
+          [ -n "$STORE_PASS" ] && echo "::add-mask::$STORE_PASS"
+          [ -n "$ALIAS_VAL" ] && echo "::add-mask::$ALIAS_VAL"
+          [ -n "$KEY_PASS" ] && echo "::add-mask::$KEY_PASS"
 
           chmod +x gradlew
           ./gradlew bundleRelease \

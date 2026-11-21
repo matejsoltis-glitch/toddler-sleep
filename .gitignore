@@ -6,3 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
+*.keystore
+*.jks
+*.p12
+*.pem
