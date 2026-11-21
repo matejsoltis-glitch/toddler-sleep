@@ -5,7 +5,16 @@ A calming sleep companion app for babies and toddlers featuring soothing multi-s
 ---
 ## Version History & Changelog
 
-### v1.0.2 (Latest)
+### v1.1.0 (Latest)
+- **Public Release**: The application has successfully passed testing and is now officially publicly available!
+- **Child Name & Birth Date Personalization**: Set your child's name and date of birth during first-run onboarding or anytime in Settings, with natural, grammatically verified phrasing across all 10 languages.
+- **Age-Based Optimal Wake Window Alerts**: Science-backed wake-window guidance (0–48+ months) with a live progress bar, gentle status alerts, sleepy-cues reminder, and official 24-hour sleep targets (AASM/AAP & WHO/NSF).
+- **Android Lock Screen Ongoing Sleep Timer**: Displays a silent live sleep chronometer on the Android lock screen while tracking sleep (configurable in Settings).
+- **Custom Day/Night Sleep Hours & Collapsible History**: Customize daytime vs. nighttime sleep hours for accurate overnight statistics, and smoothly expand or collapse the Sleep History section (collapsed by default).
+- **3 New Languages**: Added full localization for Spanish (`es`), Romanian (`ro`), and Arabic (`ar`, with RTL support) — now supporting 10 languages in total.
+- **Android Release 5 (`v1.1.0`)**: Configured `versionName "1.1.0"` and `versionCode 5` with native lock-screen notification plugin and `POST_NOTIFICATIONS` support in `.github/workflows/main.yml`.
+
+### v1.0.2
 - **App Color Modes (`Color`, `Lite`, `Black & White`)**: Added a 3-way visual mode selector in Settings with a gentle, eye-safe radial mist transition:
   - **Color**: Full atmospheric glow, frosted backdrop blur cards, and animated liquid wave sliders.
   - **Lite**: Keeps full color while disabling heavy `backdrop-blur` passes, large blur shaders, and continuous idle animations for silky-smooth lag-free performance on older devices.
@@ -23,7 +32,7 @@ A calming sleep companion app for babies and toddlers featuring soothing multi-s
 ### v1.0
 - **Refined Mobile Layout Geometry**: Halved footer height (`py-1.5`) for a minimalist bottom bar, established an exact 2mm spacing between the sleep timer module and the footer, and trimmed 2mm from the top header padding (`pt-[6mm]`) for optimal screen utilization.
 - **Complete Main Menu Button Localization**: Fully localized the "Back to main menu" navigation button, tooltips, and aria-labels across Slovak, Czech, English, Polish, Hungarian, Ukrainian, and Italian.
-- **Interactive In-App Changelog Modal**: Tapping the version badge (`v1.0.2`) in the footer opens an interactive, scrollable modal displaying the complete version history, release notes, and latest features.
+- **Interactive In-App Changelog Modal**: Tapping the version badge (`v1.1.0`) in the footer opens an interactive, scrollable modal displaying the complete version history, release notes, and latest features.
 - **Author Notice & Feedback Modal**: Tapping the author's name ("Autor: Matej Šoltis") displays a localized message for parents with direct email feedback contact (`msglitchapps@gmail.com`) and one-tap copy functionality.
 - **Official v1.0 Android Release Configuration**: Synchronized version 1.0 across `package.json`, root `capacitor.config.json`, and the GitHub Actions Android build workflow (`versionName "1.0"` / `versionCode 1`).
 

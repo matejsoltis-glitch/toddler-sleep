@@ -56,7 +56,7 @@ export const AuthorModal: React.FC<AuthorModalProps> = ({
                 {t.title || 'O autorovi'}
               </h2>
               <span className="text-[11px] text-white/50">
-                Autor: Matej Šoltis
+                {t.authorLabel} Matej Šoltis
               </span>
             </div>
           </div>

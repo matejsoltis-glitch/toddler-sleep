@@ -162,9 +162,24 @@ export const FullScreenLamp: React.FC<FullScreenLampProps> = ({
       holdText: 'Tieni premuto 1,5 s per sbloccare',
       activeText: 'Blocco bambini attivo',
     },
+    es: {
+      desc: 'Bloqueo infantil de pantalla: los toques quedarán bloqueados. Mantén pulsado 1,5 segundos en cualquier parte para desbloquear.',
+      holdText: 'Mantén pulsado 1,5 s para desbloquear',
+      activeText: 'Bloqueo infantil activo',
+    },
+    ro: {
+      desc: 'Blocare ecran pentru copii: atingerile vor fi blocate. Ține apăsat 1,5 secunde oriunde pe ecran pentru deblocare.',
+      holdText: 'Ține apăsat 1,5 s pentru deblocare',
+      activeText: 'Blocare copil activă',
+    },
+    ar: {
+      desc: 'قفل شاشة الطفل: سيتم تعطيل اللمس. اضغط مطولاً لمدة 1.5 ثانية في أي مكان على الشاشة لإلغاء القفل.',
+      holdText: 'اضغط مطولاً 1.5 ثانية لإلغاء القفل',
+      activeText: 'قفل الطفل مفعّل',
+    },
   };
 
-  const currentLockInfo = lockDescriptions[language] || lockDescriptions.sk;
+  const currentLockInfo = lockDescriptions[language] || lockDescriptions.en;
 
   // Pointer down: If locked, start 1.5s (1500ms) unlock countdown
   const handlePointerDown = (e: React.PointerEvent) => {

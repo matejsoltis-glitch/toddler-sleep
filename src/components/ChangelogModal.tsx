@@ -18,8 +18,83 @@ interface ReleaseEntry {
 
 const RELEASES: ReleaseEntry[] = [
   {
-    version: 'v1.0.2',
+    version: 'v1.1.0',
     isLatest: true,
+    highlights: {
+      sk: [
+        'Aplikácia úspešne prešla testovaním a je oficiálne verejne dostupná!',
+        'Meno a dátum narodenia dieťaťa (v úvode aj v Nastaveniach) s prirodzeným skloňovaním textov.',
+        'Upozornenie na optimálne bdelé okno podľa veku a 24h cieľ spánku (AASM/WHO).',
+        'Zobrazenie prebiehajúceho spánku na zamknutej obrazovke Androidu (tichý časovač).',
+        'Vlastné časy denného a nočného spánku, zrolovateľná história spánkov a 3 nové jazyky: španielčina, rumunčina a arabčina.',
+      ],
+      cs: [
+        'Aplikace úspěšně prošla testováním a je oficiálně veřejně dostupná!',
+        'Jméno a datum narození děťátka (v úvodu i v Nastavení) s přirozenou personalizací textů.',
+        'Upozornění na optimální bdělé okno podle věku a 24h cíl spánku (AASM/WHO).',
+        'Zobrazení probíhajícího spánku na zamčené obrazovce Androidu (tichý časovač).',
+        'Vlastní časy denního/nočního spánku, sbalitelná historie spánků a 3 nové jazyky: španělština, rumunština a arabština.',
+      ],
+      en: [
+        'The app has passed testing and is now officially publicly available!',
+        'Child name & birth date personalization (onboarding and Settings) with natural phrasing.',
+        'Age-based optimal wake-window alerts with AASM/WHO 24-hour sleep targets.',
+        'Silent ongoing sleep timer displayed directly on the Android lock screen.',
+        'Custom day/night sleep hours, collapsible sleep history, and 3 new languages: Spanish, Romanian, and Arabic.',
+      ],
+      pl: [
+        'Aplikacja pomyślnie przeszła testy i jest już oficjalnie dostępna publicznie!',
+        'Personalizacja imienia i daty urodzenia dziecka (na starcie i w Ustawieniach).',
+        'Alert optymalnego okna czuwania według wieku z celem 24h (AASM/WHO).',
+        'Cichy stoper trwającego snu na ekranie blokady Androida.',
+        'Własne godziny snu dziennego/nocnego, zwijana historia snu oraz 3 nowe języki: hiszpański, rumuński i arabski.',
+      ],
+      hu: [
+        'Az alkalmazás sikeresen teljesítette a tesztelést és hivatalosan nyilvánosan elérhető!',
+        'Kisbaba nevének és születési dátumának megadása (első indításkor és a Beállításokban).',
+        'Életkor szerinti optimális ébrenléti ablak jelzés 24 órás AASM/WHO céllal.',
+        'Folyamatban lévő alvás csendes megjelenítése az Android zárolt képernyőjén.',
+        'Egyéni nappali/éjszakai alvásidő, összecsukható alváselőzmények és 3 új nyelv: spanyol, román és arab.',
+      ],
+      uk: [
+        'Додаток успішно пройшов тестування і тепер офіційно у відкритому доступі!',
+        'Персоналізація імені та дати народження дитини (при запуску та в Налаштуваннях).',
+        'Підказка оптимального вікна неспання за віком і добова норма сну (AASM/WHO).',
+        'Тихе відображення активного сну на екрані блокування Android.',
+        'Власні години денного/нічного сну, згортання історії снів і 3 нові мови: іспанська, румунська та арабська.',
+      ],
+      it: [
+        'L’app ha superato i test ed è ora ufficialmente disponibile al pubblico!',
+        'Personalizzazione con nome e data di nascita del bambino (avvio e Impostazioni).',
+        'Avvisi finestra di veglia ottimale per età con obiettivo 24h (AASM/WHO).',
+        'Timer silenzioso del sonno in corso sulla schermata di blocco Android.',
+        'Orari giorno/notte personalizzabili, cronologia comprimibile e 3 nuove lingue: spagnolo, rumeno e arabo.',
+      ],
+      es: [
+        '¡La aplicación ha superado las pruebas y ya está disponible públicamente!',
+        'Personalización con nombre y fecha de nacimiento del bebé (inicio y Ajustes).',
+        'Avisos de ventana de vigilia óptima según la edad y objetivo de 24 h (AASM/WHO).',
+        'Cronómetro de sueño en curso en la pantalla de bloqueo de Android (en silencio).',
+        'Horario personalizado día/noche, historial plegable y 3 nuevos idiomas: español, rumano y árabe.',
+      ],
+      ro: [
+        'Aplicația a trecut testarea și este acum oficial disponibilă public!',
+        'Personalizare cu numele și data nașterii copilului (la pornire și în Setări).',
+        'Alerte pentru fereastra optimă de veghe după vârstă și țintă 24h (AASM/WHO).',
+        'Afișare silențioasă a somnului activ pe ecranul de blocare Android.',
+        'Ore personalizate zi/noapte, istoric pliabil și 3 limbi noi: spaniolă, română și arabă.',
+      ],
+      ar: [
+        'اجتاز التطبيق مرحلة الاختبار وأصبح متاحاً للجميع رسمياً!',
+        'تخصيص اسم الطفل وتاريخ ميلاده (عند التشغيل الأول وفي الإعدادات).',
+        'تنبيه نافذة اليقظة المثالية حسب العمر مع هدف النوم اليومي (AASM/WHO).',
+        'عرض مؤقت النوم الجاري بصمت على شاشة القفل في أندرويد.',
+        'تخصيص أوقات النوم النهاري والليلي، سجل نوم قابل للطي، و3 لغات جديدة: الإسبانية، الرومانية والعربية.',
+      ],
+    },
+  },
+  {
+    version: 'v1.0.2',
     highlights: {
       sk: [
         'Nové farebné režimy v nastaveniach: Farebný, plynulý Lite (pre staršie telefóny) a Čiernobiely (odtiene sivej) s jemným prechodom šetrným pre oči.',
@@ -67,6 +142,24 @@ const RELEASES: ReleaseEntry[] = [
         'Timer live del sonno nella barra superiore tra batteria e blocco bimbo.',
         'Testo del pulsante Menu principale adattabile su più righe, modalità Giorno/Notte migliorata e Immersive Sticky su Android.',
       ],
+      es: [
+        'Nuevos modos de color en Ajustes: Color, Lite fluido (para teléfonos antiguos) y Blanco y negro con transición suave.',
+        'Edición de registros de sueño guardados y ajuste de la hora exacta de inicio durante un sueño en curso.',
+        'Temporizador de sueño en vivo del modo 4 en la barra superior entre la batería y el bloqueo infantil.',
+        'Ajuste automático en dos líneas del botón Menú principal y modo pantalla completa Immersive Sticky en Android.',
+      ],
+      ro: [
+        'Moduri noi de culoare în Setări: Color, Lite rapid (pentru telefoane mai vechi) și Alb-negru cu tranziție blândă.',
+        'Editarea sesiunilor de somn salvate și ajustarea orei exacte de adormire în timpul somnului activ.',
+        'Cronometru live de somn din modul 4 afișat în bara de sus între baterie și blocarea copil.',
+        'Încadrare automată pe două rânduri a butonului Meniu principal și mod Immersive Sticky pe Android.',
+      ],
+      ar: [
+        'أوضاع ألوان جديدة في الإعدادات: ملون، ووضع Lite السريع للهواتف القديمة، وأبيض وأسود بانتقال هادئ مريح للعين.',
+        'تعديل جلسات النوم المحفوظة وضبط وقت بداية النوم بدقة أثناء استمرار النوم.',
+        'عرض مؤقت النوم المباشر في الشريط العلوي بين البطارية وقفل الطفل.',
+        'التفاف تلقائي لنص زر القائمة الرئيسية على الشاشات الضيقة ووضع ملء الشاشة Immersive Sticky على أندرويد.',
+      ],
     },
   },
   {
@@ -99,6 +192,18 @@ const RELEASES: ReleaseEntry[] = [
       it: [
         'Correzione schermata di selezione della lingua: layout compatto senza scorrimento.',
         'Pulsante di conferma posizionato in modo sicuro sopra i tasti di sistema Android.',
+      ],
+      es: [
+        'Corrección de la pantalla de selección de idioma: diseño compacto sin desplazamiento.',
+        'Botón de continuar situado de forma segura por encima de los botones del sistema Android.',
+      ],
+      ro: [
+        'Corectarea ecranului de alegere a limbii: aranjament compact fără derulare.',
+        'Butonul de confirmare poziționat în siguranță deasupra barei de navigare Android.',
+      ],
+      ar: [
+        'تحسين شاشة اختيار اللغة بتصميم مدمج دون الحاجة للتمرير.',
+        'وضع زر المتابعة بأمان فوق أزرار التنقل في نظام أندرويد.',
       ],
     },
   },
@@ -164,6 +269,21 @@ const RELEASES: ReleaseEntry[] = [
         'Finestra interattiva del registro delle modifiche toccando la versione.',
         'Finestra di contatto e autore toccando il nome dell\'autore (msglitchapps@gmail.com).',
       ],
+      es: [
+        '¡Versión estable oficial v1.0!',
+        'Pie de página más compacto y cabecera superior optimizada para móviles.',
+        'Ventana interactiva del historial de versiones y ventana de contacto del autor (msglitchapps@gmail.com).',
+      ],
+      ro: [
+        'Versiunea oficială stabilă v1.0!',
+        'Subsol și antet optimizate pentru ecrane mobile.',
+        'Fereastră interactivă cu istoricul versiunilor și date de contact ale autorului (msglitchapps@gmail.com).',
+      ],
+      ar: [
+        'الإصدار المستقر الرسمي v1.0!',
+        'تصميم مدمج للشريط العلوي والسفلي يناسب شاشات الهواتف.',
+        'نافذة تفاعلية لسجل الإصدارات ومعلومات التواصل مع المطوّر (msglitchapps@gmail.com).',
+      ],
     },
   },
   {
@@ -200,6 +320,18 @@ const RELEASES: ReleaseEntry[] = [
         'Transizioni di colore fluide e morbide nella modalità luce calma.',
         'Allineamento corretto della ruota dei colori.',
       ],
+      es: [
+        'Transiciones de color fluidas y suaves en el modo luz relajante.',
+        'Alineación mejorada de la rueda de colores y espectro circadiano.',
+      ],
+      ro: [
+        'Tranziții fluide de culoare în modul lumină calmă.',
+        'Aliniere îmbunătățită pentru roata de culori și spectrul circadian.',
+      ],
+      ar: [
+        'انتقالات لونية سلسة وناعمة في وضع الإضاءة الهادئة.',
+        'تحسين محاذاة عجلة الألوان والطيف اليوماوي.',
+      ],
     },
   },
   {
@@ -225,6 +357,9 @@ const RELEASES: ReleaseEntry[] = [
       hu: ['Kompaktabb csúszkák és egyéni 2-6 színválasztás.'],
       uk: ['Компактні повзунки та власна палітра від 2 до 6 кольорів.'],
       it: ['Cursori più compatti e tavolozza personalizzata da 2 a 6 colori.'],
+      es: ['Deslizadores más compactos y paleta personalizada de 2 a 6 colores.'],
+      ro: ['Glisoare mai compacte și paletă personalizată de la 2 la 6 culori.'],
+      ar: ['أشرطة تمرير أكثر تناسقاً ولوحة ألوان مخصصة من 2 إلى 6 ألوان.'],
     },
   },
   {
@@ -249,6 +384,9 @@ const RELEASES: ReleaseEntry[] = [
       hu: ['Interaktív naptár és átlátszóság csúszka.'],
       uk: ['Інтерактивний календар та повзунок прозорості.'],
       it: ['Calendario interattivo e cursore trasparenza.'],
+      es: ['Calendario interactivo y control de opacidad.'],
+      ro: ['Calendar interactiv și control de opacitate.'],
+      ar: ['تقويم تفاعلي وشريط تحكم في الشفافية.'],
     },
   },
   {
@@ -272,6 +410,9 @@ const RELEASES: ReleaseEntry[] = [
       hu: ['Időzítő, alvástörténet és statisztikák fejlesztése.'],
       uk: ['Покращення таймера, історії сну та розкладу.'],
       it: ['Miglioramenti al timer, cronologia del sonno e statistiche.'],
+      es: ['Mejoras en el temporizador, historial de sueño y estadísticas.'],
+      ro: ['Îmbunătățiri ale cronometrului, istoricului de somn și statisticilor.'],
+      ar: ['تحسينات في المؤقت وسجل النوم والإحصاءات.'],
     },
   },
 ];
@@ -308,7 +449,7 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
                 {t.changelogModal?.title || 'História verzií a novinky'}
               </h2>
               <span className="text-[11px] text-amber-300/80 font-mono">
-                Aktuálna verzia: v1.0.2
+                {t.changelogModal.currentVersionLabel} v1.1.0
               </span>
             </div>
           </div>
@@ -345,7 +486,7 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
                   {rel.isLatest && (
                     <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-bold text-[10px] tracking-wider uppercase flex items-center gap-1 shadow-sm">
                       <Sparkles className="w-3 h-3" />
-                      Najnovšia
+                      {t.changelogModal.latestBadge}
                     </span>
                   )}
                 </div>

@@ -4,9 +4,11 @@ import { getTimerPresets } from '../constants/palettes';
 import { Language } from '../types';
 import { translations } from '../i18n/translations';
 import { triggerHaptic } from '../utils/haptics';
+import { getPersonalizedCopy } from '../utils/babyName';
 
 interface SleepTimerControlsProps {
   language: Language;
+  babyName?: string;
   durationMinutes: number;
   remainingSeconds: number;
   isRunning: boolean;
@@ -65,10 +67,26 @@ const timerI18n: Record<
     add5: '+5 min',
     fadeDisabledHint: 'Dissolvenza prima dello spegnimento disattivata',
   },
+  es: {
+    subtract5: '-5 min',
+    add5: '+5 min',
+    fadeDisabledHint: 'Atenuación gradual antes de detener desactivada',
+  },
+  ro: {
+    subtract5: '-5 min',
+    add5: '+5 min',
+    fadeDisabledHint: 'Estomparea treptată înainte de oprire este oprită',
+  },
+  ar: {
+    subtract5: '-5 د',
+    add5: '+5 د',
+    fadeDisabledHint: 'الخفوت التدريجي قبل التوقف متوقف',
+  },
 };
 
 export const SleepTimerControls: React.FC<SleepTimerControlsProps> = ({
   language,
+  babyName = '',
   durationMinutes,
   remainingSeconds,
   isRunning,
@@ -254,6 +272,7 @@ export const SleepTimerControls: React.FC<SleepTimerControlsProps> = ({
       {/* Tier 3: Interactive Liquid Water Progress Bar (Sensitive to 10s, No Ball, No Sub-Text) */}
       <div
         ref={trackRef}
+        dir="ltr"
         onClick={(e) => e.stopPropagation()}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -371,7 +390,9 @@ export const SleepTimerControls: React.FC<SleepTimerControlsProps> = ({
                         {t.fadeRecommended}
                       </span>
                     </div>
-                    <p className="text-[10px] text-white/60 mt-0.5 leading-tight">{t.fadeDesc}</p>
+                    <p className="text-[10px] text-white/60 mt-0.5 leading-tight">
+                      {getPersonalizedCopy(babyName, language)?.fadeDesc ?? t.fadeDesc}
+                    </p>
                   </div>
                 </div>
               </div>

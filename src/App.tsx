@@ -14,8 +14,16 @@ import { LanguageOnboardingModal } from './components/LanguageOnboardingModal';
 import { ChangelogModal } from './components/ChangelogModal';
 import { AuthorModal } from './components/AuthorModal';
 import { getPalettes } from './constants/palettes';
+import { translations } from './i18n/translations';
 import { soundEngine } from './services/soundEngine';
 import { isHapticsEnabled, setHapticsEnabled, triggerHaptic } from './utils/haptics';
+import { BABY_NAME_STORAGE_KEY, normalizeBabyName } from './utils/babyName';
+import { BABY_BIRTH_DATE_STORAGE_KEY } from './utils/wakeWindow';
+import {
+  LOCKSCREEN_SLEEP_STORAGE_KEY,
+  requestLockScreenSleepPermission,
+  syncLockScreenOngoingSleep,
+} from './services/lockScreenSleep';
 import {
   AppMode,
   WhiteNoiseLevel,
@@ -53,7 +61,7 @@ export default function App() {
     try {
       const configured = localStorage.getItem('toddler_lang_configured');
       const saved = localStorage.getItem('toddler_lang') as Language;
-      const validLangs: Language[] = ['en', 'sk', 'cs', 'pl', 'hu', 'uk', 'it'];
+      const validLangs: Language[] = ['en', 'sk', 'cs', 'pl', 'hu', 'uk', 'it', 'es', 'ro', 'ar'];
       if (configured === 'true' && validLangs.includes(saved)) {
         return saved;
       }
@@ -62,6 +70,84 @@ export default function App() {
       return 'en';
     }
   });
+
+  // Child's name personalization (persists in localStorage, editable in Onboarding & Settings)
+  const [babyName, setBabyName] = useState<string>(() => {
+    try {
+      return normalizeBabyName(localStorage.getItem(BABY_NAME_STORAGE_KEY));
+    } catch {
+      return '';
+    }
+  });
+
+  const handleChangeBabyName = (rawName: string) => {
+    const trimmedMax = rawName.slice(0, 24);
+    setBabyName(trimmedMax);
+    try {
+      const cleaned = normalizeBabyName(trimmedMax);
+      if (cleaned) {
+        localStorage.setItem(BABY_NAME_STORAGE_KEY, cleaned);
+      } else {
+        localStorage.removeItem(BABY_NAME_STORAGE_KEY);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  // Child's birth date for age-based optimal wake window alerts (YYYY-MM-DD)
+  const [babyBirthDate, setBabyBirthDate] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(BABY_BIRTH_DATE_STORAGE_KEY);
+      if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) return saved;
+    } catch {
+      // ignore
+    }
+    return '';
+  });
+
+  const handleChangeBabyBirthDate = (nextDate: string) => {
+    const cleaned = /^\d{4}-\d{2}-\d{2}$/.test(nextDate) ? nextDate : '';
+    setBabyBirthDate(cleaned);
+    try {
+      if (cleaned) {
+        localStorage.setItem(BABY_BIRTH_DATE_STORAGE_KEY, cleaned);
+      } else {
+        localStorage.removeItem(BABY_BIRTH_DATE_STORAGE_KEY);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  // Android lock-screen ongoing sleep timer notification toggle (enabled by default)
+  const [lockScreenSleepEnabled, setLockScreenSleepEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(LOCKSCREEN_SLEEP_STORAGE_KEY);
+      if (saved === 'false') return false;
+    } catch {
+      // ignore
+    }
+    return true;
+  });
+
+  const handleToggleLockScreenSleep = (enabled: boolean) => {
+    setLockScreenSleepEnabled(enabled);
+    try {
+      localStorage.setItem(LOCKSCREEN_SLEEP_STORAGE_KEY, enabled ? 'true' : 'false');
+    } catch {
+      // ignore
+    }
+    if (enabled) {
+      void requestLockScreenSleepPermission();
+    }
+  };
+
+  // Sync HTML document direction (RTL for Arabic) and lang attribute
+  useEffect(() => {
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = language;
+  }, [language]);
 
   const handleSelectLanguage = (lang: Language) => {
     setLanguage(lang);
@@ -85,8 +171,16 @@ export default function App() {
     });
   };
 
-  const handleConfirmOnboarding = (lang: Language) => {
+  const handleConfirmOnboarding = (
+    lang: Language,
+    initialBabyName: string,
+    initialBirthDate?: string
+  ) => {
     handleSelectLanguage(lang);
+    handleChangeBabyName(initialBabyName);
+    if (initialBirthDate) {
+      handleChangeBabyBirthDate(initialBirthDate);
+    }
     setIsFirstRun(false);
   };
 
@@ -243,6 +337,16 @@ export default function App() {
     try {
       if (nextIso) {
         localStorage.setItem('toddler_active_sleep_start', nextIso);
+        if (lockScreenSleepEnabled) {
+          void requestLockScreenSleepPermission().then(() =>
+            syncLockScreenOngoingSleep({
+              enabled: true,
+              activeSleepStart: nextIso,
+              language,
+              babyName,
+            })
+          );
+        }
       } else {
         localStorage.removeItem('toddler_active_sleep_start');
       }
@@ -250,6 +354,16 @@ export default function App() {
       // ignore
     }
   };
+
+  // Keep Android lock-screen ongoing sleep notification synced with sleep state, language, baby name & toggle
+  useEffect(() => {
+    void syncLockScreenOngoingSleep({
+      enabled: lockScreenSleepEnabled,
+      activeSleepStart,
+      language,
+      babyName,
+    });
+  }, [lockScreenSleepEnabled, activeSleepStart, language, babyName]);
 
   useEffect(() => {
     if (!activeSleepStart) {
@@ -838,19 +952,7 @@ export default function App() {
           <div className="flex flex-col items-center gap-3 text-white/25 hover:text-white/40 transition-colors pointer-events-none">
             <Moon className="w-8 h-8 opacity-30 animate-pulse" />
             <span className="text-[11px] tracking-widest uppercase font-medium">
-              {language === 'sk'
-                ? 'Dotknite sa pre rozsvietenie'
-                : language === 'cs'
-                ? 'Klepnutím rozsvítíte'
-                : language === 'pl'
-                ? 'Dotknij, aby rozjaśnić'
-                : language === 'hu'
-                ? 'Érintse meg a feloldáshoz'
-                : language === 'uk'
-                ? 'Торкніться для підсвітки'
-                : language === 'it'
-                ? 'Tocca per riattivare'
-                : 'Tap screen to wake'}
+              {translations[language].sleepDimmedWakePrompt}
             </span>
           </div>
         </div>
@@ -859,11 +961,12 @@ export default function App() {
       {/* Child Lock Fullscreen Interceptor */}
       <TouchLockOverlay
         language={language}
+        babyName={babyName}
         isLocked={isTouchLocked}
         onUnlock={() => setIsTouchLocked(false)}
       />
 
-      {/* First-Run Language Selection Onboarding Modal */}
+      {/* First-Run Language & Baby Name Onboarding Modal */}
       <LanguageOnboardingModal
         isOpen={isFirstRun}
         onConfirm={handleConfirmOnboarding}
@@ -889,6 +992,12 @@ export default function App() {
         onClose={() => setIsSettingsOpen(false)}
         language={language}
         onSelectLanguage={handleSelectLanguage}
+        babyName={babyName}
+        onChangeBabyName={handleChangeBabyName}
+        babyBirthDate={babyBirthDate}
+        onChangeBabyBirthDate={handleChangeBabyBirthDate}
+        lockScreenSleepEnabled={lockScreenSleepEnabled}
+        onToggleLockScreenSleep={handleToggleLockScreenSleep}
         nightMode={nightMode}
         onUpdateNightMode={handleUpdateNightMode}
         colorMode={colorMode}
@@ -949,6 +1058,7 @@ export default function App() {
           {activeMode === 'menu' && (
             <MainMenu
               language={language}
+              babyName={babyName}
               onSelectMode={handleSelectModeFromMenu}
               isLightActive={isLightOn}
               isWhiteNoiseActive={isWhiteNoisePlaying}
@@ -994,6 +1104,7 @@ export default function App() {
           {activeMode === 'white-noise' && (
             <WhiteNoiseMode
               language={language}
+              babyName={babyName}
               isPlaying={isWhiteNoisePlaying}
               activeLevel={whiteNoiseLevel}
               onSelectLevel={handleSelectWhiteNoiseLevel}
@@ -1009,6 +1120,7 @@ export default function App() {
           {activeMode === 'nature' && (
             <NatureSoundsMode
               language={language}
+              babyName={babyName}
               isPlaying={isNaturePlaying}
               activeNature={activeNatureSound}
               onSelectNature={handleSelectNatureSound}
@@ -1024,6 +1136,10 @@ export default function App() {
           {activeMode === 'schedule' && (
             <ScheduleAssistantMode
               language={language}
+              babyName={babyName}
+              babyBirthDate={babyBirthDate}
+              onChangeBabyBirthDate={handleChangeBabyBirthDate}
+              lockScreenSleepEnabled={lockScreenSleepEnabled}
               activeSleepStart={activeSleepStart}
               sleepElapsedSeconds={sleepElapsedSeconds}
               onUpdateActiveSleepStart={handleUpdateActiveSleepStart}
@@ -1035,6 +1151,7 @@ export default function App() {
         <div className="mt-0">
           <SleepTimerControls
             language={language}
+            babyName={babyName}
             durationMinutes={durationMinutes}
             remainingSeconds={remainingSeconds}
             isRunning={isTimerRunning}
@@ -1064,11 +1181,11 @@ export default function App() {
             triggerHaptic(8);
             setIsChangelogOpen(true);
           }}
-          className="flex items-center gap-1.5 hover:text-amber-300 transition-colors group cursor-pointer text-left"
-          title="Kliknite pre zobrazenie noviniek a histórie verzií"
+          className="flex items-center gap-1.5 hover:text-amber-300 transition-colors group cursor-pointer text-start"
+          title={translations[language].changelogModal.title}
         >
           <span className="font-medium text-white/60 group-hover:text-amber-200">Toddler sleep assistant</span>
-          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-white/10 group-hover:bg-amber-400 group-hover:text-slate-950 text-amber-300 transition-all">v1.0.2</span>
+          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-white/10 group-hover:bg-amber-400 group-hover:text-slate-950 text-amber-300 transition-all">v1.1.0</span>
         </button>
 
         <button
@@ -1076,10 +1193,10 @@ export default function App() {
             triggerHaptic(8);
             setIsAuthorOpen(true);
           }}
-          className="hover:text-amber-300 transition-colors cursor-pointer text-right group"
-          title="Kliknite pre kontakt a informácie o autorovi"
+          className="hover:text-amber-300 transition-colors cursor-pointer text-end group"
+          title={translations[language].authorNotice.title}
         >
-          <span>Autor: </span>
+          <span>{translations[language].authorNotice.authorLabel} </span>
           <span className="underline decoration-dotted underline-offset-2 text-white/60 group-hover:text-amber-200">Matej Šoltis</span>
         </button>
       </footer>

@@ -245,7 +245,7 @@ export const CalmLightMode: React.FC<CalmLightModeProps> = ({
             {t.palettesTitle}
           </h3>
           <span className="text-[11px] text-amber-300/80 font-medium">
-            {isPaletteSelectorExpanded ? (language === 'sk' ? 'Všetky palety' : 'All palettes') : (t.activePaletteOnly || 'Aktívna paleta')}
+            {isPaletteSelectorExpanded ? t.allPalettes : t.activePaletteOnly}
           </span>
         </div>
 
@@ -269,8 +269,8 @@ export const CalmLightMode: React.FC<CalmLightModeProps> = ({
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="text-[11px] text-amber-300 font-medium">
                 {isPaletteSelectorExpanded
-                  ? (language === 'sk' ? 'Zbaliť výber' : 'Collapse')
-                  : (t.changePalette || 'Zmeniť paletu')}
+                  ? t.collapseSelection
+                  : t.changePalette}
               </span>
               <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center text-white/70">
                 <ChevronDown

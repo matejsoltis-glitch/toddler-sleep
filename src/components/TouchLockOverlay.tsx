@@ -2,21 +2,25 @@ import React, { useState, useRef } from 'react';
 import { Unlock, ShieldAlert } from 'lucide-react';
 import { Language } from '../types';
 import { translations } from '../i18n/translations';
+import { getPersonalizedCopy } from '../utils/babyName';
 
 interface TouchLockOverlayProps {
   language: Language;
+  babyName?: string;
   isLocked: boolean;
   onUnlock: () => void;
 }
 
 export const TouchLockOverlay: React.FC<TouchLockOverlayProps> = ({
   language,
+  babyName = '',
   isLocked,
   onUnlock,
 }) => {
   const [holdProgress, setHoldProgress] = useState(0); // 0 to 100
   const timerRef = useRef<number | null>(null);
   const t = translations[language];
+  const personalized = getPersonalizedCopy(babyName, language);
 
   if (!isLocked) return null;
 
@@ -59,7 +63,7 @@ export const TouchLockOverlay: React.FC<TouchLockOverlayProps> = ({
           {t.touchLocked}
         </h3>
         <p className="text-xs text-white/70 mt-1 leading-relaxed">
-          {t.touchLockSubtitle}
+          {personalized?.touchLockSubtitle ?? t.touchLockSubtitle}
         </p>
 
         {/* Hold to unlock button */}

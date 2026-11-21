@@ -66,11 +66,11 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
           {activeMode !== 'menu' ? (
             <button
               onClick={onBackToMenu}
-              className="min-h-8 px-2 sm:px-2.5 py-1 -ml-0.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/95 flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold transition-all touch-manipulation border border-white/15 shadow-sm max-w-full text-left"
+              className="min-h-8 px-2 sm:px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/95 flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold transition-all touch-manipulation border border-white/15 shadow-sm max-w-full text-start"
               title={t.backToMenuTooltip}
               aria-label={t.backToMenuTooltip}
             >
-              <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+              <ArrowLeft className={`w-3.5 h-3.5 shrink-0 ${language === 'ar' ? 'rotate-180' : ''}`} />
               <span className="min-w-0 leading-[1.15] whitespace-normal">{t.mainMenuButton}</span>
             </button>
           ) : (
@@ -79,7 +79,7 @@ export const ClockHeader: React.FC<ClockHeaderProps> = ({
                 triggerHaptic(8);
                 onToggleNightMode();
               }}
-              className={`min-h-8 flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-semibold transition-all active:scale-95 touch-manipulation border cursor-pointer max-w-full text-left ${
+              className={`min-h-8 flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-semibold transition-all active:scale-95 touch-manipulation border cursor-pointer max-w-full text-start ${
                 isDarkMode
                   ? 'bg-amber-400/20 border-amber-400/40 text-amber-300 shadow-sm'
                   : 'bg-white/10 hover:bg-white/15 border-white/15 text-white/90'

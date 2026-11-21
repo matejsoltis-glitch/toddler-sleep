@@ -3,9 +3,11 @@ import { Play, Pause, Volume2, Trees, CloudRain, Waves, Bird, Heart } from 'luci
 import { NatureSoundType, Language } from '../types';
 import { translations } from '../i18n/translations';
 import { triggerHaptic } from '../utils/haptics';
+import { getPersonalizedCopy } from '../utils/babyName';
 
 interface NatureSoundsModeProps {
   language: Language;
+  babyName?: string;
   isPlaying: boolean;
   activeNature: NatureSoundType;
   onSelectNature: (nature: NatureSoundType) => void;
@@ -18,6 +20,7 @@ interface NatureSoundsModeProps {
 
 export const NatureSoundsMode: React.FC<NatureSoundsModeProps> = ({
   language,
+  babyName = '',
   isPlaying,
   activeNature,
   onSelectNature,
@@ -28,6 +31,7 @@ export const NatureSoundsMode: React.FC<NatureSoundsModeProps> = ({
   fadeMultiplier,
 }) => {
   const t = translations[language].modes.nature;
+  const personalized = getPersonalizedCopy(babyName, language);
 
   const natureOptions: {
     id: NatureSoundType;
@@ -44,7 +48,7 @@ export const NatureSoundsMode: React.FC<NatureSoundsModeProps> = ({
       title: t.sounds.heartbeat.title,
       subtitle: t.sounds.heartbeat.subtitle,
       icon: Heart,
-      description: t.sounds.heartbeat.description,
+      description: personalized?.natureHeartbeatDesc ?? t.sounds.heartbeat.description,
       rhythm: t.sounds.heartbeat.rhythm,
       gradient: 'from-rose-500/20 to-red-500/20 border-rose-500/40',
       themeBg: 'rgba(244, 63, 94, 0.25)',
@@ -54,7 +58,7 @@ export const NatureSoundsMode: React.FC<NatureSoundsModeProps> = ({
       title: t.sounds.forest.title,
       subtitle: t.sounds.forest.subtitle,
       icon: Trees,
-      description: t.sounds.forest.description,
+      description: personalized?.natureForestDesc ?? t.sounds.forest.description,
       rhythm: t.sounds.forest.rhythm,
       gradient: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/40',
       themeBg: 'rgba(16, 185, 129, 0.25)',
@@ -74,7 +78,7 @@ export const NatureSoundsMode: React.FC<NatureSoundsModeProps> = ({
       title: t.sounds.ocean.title,
       subtitle: t.sounds.ocean.subtitle,
       icon: Waves,
-      description: t.sounds.ocean.description,
+      description: personalized?.natureOceanDesc ?? t.sounds.ocean.description,
       rhythm: t.sounds.ocean.rhythm,
       gradient: 'from-teal-500/20 to-blue-500/20 border-teal-500/40',
       themeBg: 'rgba(20, 184, 166, 0.25)',
@@ -287,7 +291,7 @@ export const NatureSoundsMode: React.FC<NatureSoundsModeProps> = ({
           </button>
         </div>
         <p className="text-[11px] text-white/50">
-          {t.volumeTip}
+          {personalized?.natureVolumeTip ?? t.volumeTip}
         </p>
       </div>
     </div>

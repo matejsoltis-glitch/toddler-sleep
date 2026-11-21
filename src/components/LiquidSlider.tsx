@@ -53,6 +53,7 @@ export const LiquidSlider: React.FC<LiquidSliderProps> = ({
       {/* Interactive Liquid Slider Track (No Ball/Knob, sleek water ripple) */}
       <div
         ref={trackRef}
+        dir="ltr"
         className={`relative w-full ${compact ? 'h-4.5' : 'h-5.5'} flex items-center cursor-pointer touch-none group`}
       >
         {/* Visual Track Channel */}

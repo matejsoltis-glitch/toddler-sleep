@@ -1,9 +1,14 @@
-export type Language = 'sk' | 'cs' | 'en' | 'pl' | 'hu' | 'uk' | 'it';
+export type Language = 'sk' | 'cs' | 'en' | 'pl' | 'hu' | 'uk' | 'it' | 'es' | 'ro' | 'ar';
 
 export type AppMode = 'menu' | 'light' | 'white-noise' | 'nature' | 'schedule';
 
 export type SleepQuality = 'peaceful' | 'normal' | 'restless';
 export type SleepType = 'day-nap' | 'night-sleep';
+
+export interface SleepScheduleBounds {
+  dayStart: string; // HH:mm e.g. "07:00"
+  nightStart: string; // HH:mm e.g. "19:00"
+}
 
 export interface SleepSession {
   id: string;

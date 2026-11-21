@@ -3,9 +3,11 @@ import { Play, Pause, Volume2, Wind, Waves, Heart, ArrowLeft } from 'lucide-reac
 import { WhiteNoiseLevel, Language } from '../types';
 import { translations } from '../i18n/translations';
 import { triggerHaptic } from '../utils/haptics';
+import { getPersonalizedCopy } from '../utils/babyName';
 
 interface WhiteNoiseModeProps {
   language: Language;
+  babyName?: string;
   isPlaying: boolean;
   activeLevel: WhiteNoiseLevel;
   onSelectLevel: (level: WhiteNoiseLevel) => void;
@@ -18,6 +20,7 @@ interface WhiteNoiseModeProps {
 
 export const WhiteNoiseMode: React.FC<WhiteNoiseModeProps> = ({
   language,
+  babyName = '',
   isPlaying,
   activeLevel,
   onSelectLevel,
@@ -28,6 +31,7 @@ export const WhiteNoiseMode: React.FC<WhiteNoiseModeProps> = ({
   fadeMultiplier,
 }) => {
   const t = translations[language].modes.whiteNoise;
+  const personalized = getPersonalizedCopy(babyName, language);
 
   const levels: {
     id: WhiteNoiseLevel;
@@ -46,7 +50,7 @@ export const WhiteNoiseMode: React.FC<WhiteNoiseModeProps> = ({
       levelNum: t.levels.gentle.levelNum,
       icon: Wind,
       pitch: t.levels.gentle.pitch,
-      description: t.levels.gentle.description,
+      description: personalized?.whiteNoiseGentleDesc ?? t.levels.gentle.description,
       idealFor: t.levels.gentle.idealFor,
       frequencyInfo: t.levels.gentle.frequency,
       gradient: 'from-teal-500/20 to-sky-500/20 border-teal-400/40',
@@ -184,7 +188,7 @@ export const WhiteNoiseMode: React.FC<WhiteNoiseModeProps> = ({
           <h3 className="font-semibold tracking-wider text-white/70 uppercase">
             {t.levelsTitle}
           </h3>
-          <span className="text-white/40">{t.levelsTip}</span>
+          <span className="text-white/40">{personalized?.whiteNoiseLevelsTip ?? t.levelsTip}</span>
         </div>
 
         <div className="grid grid-cols-1 gap-2">
@@ -275,7 +279,7 @@ export const WhiteNoiseMode: React.FC<WhiteNoiseModeProps> = ({
           </button>
         </div>
         <p className="text-[11px] text-white/50">
-          {t.volumeTip}
+          {personalized?.whiteNoiseVolumeTip ?? t.volumeTip}
         </p>
       </div>
     </div>

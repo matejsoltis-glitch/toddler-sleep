@@ -15,15 +15,32 @@ import {
   X,
   Pencil,
   Check,
+  SlidersHorizontal,
+  Cake,
+  BellRing,
+  Smartphone,
+  History,
 } from 'lucide-react';
-import { Language, SleepSession, SleepQuality, SleepType } from '../types';
+import { Language, SleepSession, SleepQuality, SleepType, SleepScheduleBounds } from '../types';
 import { triggerHaptic } from '../utils/haptics';
+import { getPersonalizedCopy, getPersonalizedSchedulePhrases } from '../utils/babyName';
+import {
+  evaluateWakeWindow,
+  formatShortAge,
+  formatWakeDuration,
+  getWakeWindowCopy,
+} from '../utils/wakeWindow';
+import { getLockScreenCopy } from '../services/lockScreenSleep';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 
 interface ScheduleAssistantModeProps {
   language: Language;
+  babyName?: string;
+  babyBirthDate?: string;
+  onChangeBabyBirthDate?: (dateStr: string) => void;
+  lockScreenSleepEnabled?: boolean;
   activeSleepStart?: string | null;
   sleepElapsedSeconds?: number;
   onUpdateActiveSleepStart?: (nextIso: string | null) => void;
@@ -31,6 +48,58 @@ interface ScheduleAssistantModeProps {
 
 const STORAGE_KEY_SESSIONS = 'toddler_sleep_sessions';
 const STORAGE_KEY_ACTIVE_SLEEP = 'toddler_active_sleep_start';
+const STORAGE_KEY_BOUNDS = 'toddler_sleep_schedule_bounds';
+const DEFAULT_SCHEDULE_BOUNDS: SleepScheduleBounds = {
+  dayStart: '07:00',
+  nightStart: '19:00',
+};
+
+const toLocalDateStr = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const toLocalTimeStr = (d: Date) => {
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+};
+
+const timeStrToMinutes = (hhmm: string): number => {
+  const [hStr, mStr] = hhmm.split(':');
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return 0;
+  return ((h * 60 + m) % 1440 + 1440) % 1440;
+};
+
+const classifySleepTypeByBounds = (
+  startIsoOrDate: string | Date,
+  bounds: SleepScheduleBounds
+): SleepType => {
+  const d = typeof startIsoOrDate === 'string' ? new Date(startIsoOrDate) : startIsoOrDate;
+  if (Number.isNaN(d.getTime())) return 'day-nap';
+  const mins = d.getHours() * 60 + d.getMinutes();
+  const dayStartMins = timeStrToMinutes(bounds.dayStart);
+  const nightStartMins = timeStrToMinutes(bounds.nightStart);
+  if (dayStartMins === nightStartMins) return 'day-nap';
+  if (dayStartMins < nightStartMins) {
+    return mins >= dayStartMins && mins < nightStartMins ? 'day-nap' : 'night-sleep';
+  }
+  return mins >= dayStartMins || mins < nightStartMins ? 'day-nap' : 'night-sleep';
+};
+
+const getSessionCalendarDate = (session: SleepSession): string => {
+  // Night sleep starting the previous evening belongs to the day it finishes (morning summary)
+  const refDate =
+    session.type === 'night-sleep' ? new Date(session.endTime) : new Date(session.startTime);
+  if (Number.isNaN(refDate.getTime())) {
+    return session.startTime.split('T')[0];
+  }
+  return toLocalDateStr(refDate);
+};
 
 interface ScheduleTexts {
   currentStatus: string;
@@ -128,6 +197,18 @@ interface ScheduleTexts {
   customStartTimeLabel: string;
   applyBtn: string;
   cancelBtn: string;
+  // Custom day/night sleep window keys
+  sleepBoundsBtn: string;
+  sleepBoundsModalTitle: string;
+  sleepBoundsModalDesc: string;
+  daySleepFrom: string;
+  nightSleepFrom: string;
+  dayWindowPreview: string;
+  nightWindowPreview: string;
+  saveBoundsBtn: string;
+  toastBoundsUpdated: string;
+  sampleNote1: string;
+  sampleNote2: string;
 }
 
 const scheduleTexts: Record<Language, ScheduleTexts> = {
@@ -228,6 +309,17 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     customStartTimeLabel: 'Presný čas zaspatia:',
     applyBtn: 'Použiť',
     cancelBtn: 'Zrušiť',
+    sleepBoundsBtn: 'Časy spánku',
+    sleepBoundsModalTitle: 'Časy denného a nočného spánku',
+    sleepBoundsModalDesc: 'Nastavte, od ktorej hodiny vaše dieťatko bežne máva denný a od ktorej nočný spánok. Nočný spánok začatý pred polnocou sa automaticky správne priradí do dnešného prehľadu.',
+    daySleepFrom: 'Denný spánok od',
+    nightSleepFrom: 'Nočný spánok od',
+    dayWindowPreview: 'Denný:',
+    nightWindowPreview: 'Nočný:',
+    saveBoundsBtn: 'Uložiť časy',
+    toastBoundsUpdated: 'Časy denného a nočného spánku boli uložené ✨',
+    sampleNote1: 'Zaspalo rýchlo po prechádzke',
+    sampleNote2: 'Kľudná noc',
   },
   cs: {
     currentStatus: 'Aktuální stav',
@@ -326,6 +418,17 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     customStartTimeLabel: 'Přesný čas usnutí:',
     applyBtn: 'Použít',
     cancelBtn: 'Zrušit',
+    sleepBoundsBtn: 'Časy spánku',
+    sleepBoundsModalTitle: 'Časy denního a nočního spánku',
+    sleepBoundsModalDesc: 'Nastavte, od které hodiny má vaše miminko obvykle denní a od které noční spánek. Noční spánek započatý před půlnocí se správně započítá do dnešního přehledu.',
+    daySleepFrom: 'Denní spánek od',
+    nightSleepFrom: 'Noční spánek od',
+    dayWindowPreview: 'Denní:',
+    nightWindowPreview: 'Noční:',
+    saveBoundsBtn: 'Uložit časy',
+    toastBoundsUpdated: 'Časy denního a nočního spánku byly uloženy ✨',
+    sampleNote1: 'Usnulo rychle po procházce',
+    sampleNote2: 'Klidná noc',
   },
   en: {
     currentStatus: 'Current Status',
@@ -424,6 +527,17 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     customStartTimeLabel: 'Exact start time:',
     applyBtn: 'Apply',
     cancelBtn: 'Cancel',
+    sleepBoundsBtn: 'Sleep hours',
+    sleepBoundsModalTitle: 'Day & Night Sleep Hours',
+    sleepBoundsModalDesc: 'Set when your baby typically has daytime naps vs. nighttime sleep. Overnight sleep starting before midnight is accurately counted in today’s summary.',
+    daySleepFrom: 'Day sleep from',
+    nightSleepFrom: 'Night sleep from',
+    dayWindowPreview: 'Day:',
+    nightWindowPreview: 'Night:',
+    saveBoundsBtn: 'Save Hours',
+    toastBoundsUpdated: 'Day & night sleep hours saved ✨',
+    sampleNote1: 'Fell asleep quickly after a walk',
+    sampleNote2: 'Peaceful night',
   },
   pl: {
     currentStatus: 'Aktualny stan',
@@ -522,6 +636,17 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     customStartTimeLabel: 'Dokładna godzina zaśnięcia:',
     applyBtn: 'Zastosuj',
     cancelBtn: 'Anuluj',
+    sleepBoundsBtn: 'Godziny snu',
+    sleepBoundsModalTitle: 'Godziny snu dziennego i nocnego',
+    sleepBoundsModalDesc: 'Ustaw, od której godziny maluszek zazwyczaj ma drzemki dzienne, a od której sen nocny. Sen nocny rozpoczęty przed północą zostanie poprawnie wliczony do dzisiejszych statystyk.',
+    daySleepFrom: 'Sen dzienny od',
+    nightSleepFrom: 'Sen nocny od',
+    dayWindowPreview: 'Dzień:',
+    nightWindowPreview: 'Noc:',
+    saveBoundsBtn: 'Zapisz godziny',
+    toastBoundsUpdated: 'Zapisano godziny snu dziennego i nocnego ✨',
+    sampleNote1: 'Szybko zasnęło po spacerze',
+    sampleNote2: 'Spokojna noc',
   },
   hu: {
     currentStatus: 'Jelenlegi állapot',
@@ -620,6 +745,17 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     customStartTimeLabel: 'Pontos elalvási idő:',
     applyBtn: 'Alkalmaz',
     cancelBtn: 'Mégse',
+    sleepBoundsBtn: 'Alvási idősáv',
+    sleepBoundsModalTitle: 'Nappali és éjszakai alvás ideje',
+    sleepBoundsModalDesc: 'Állítsd be, hány órától számít nappali, illetve éjszakai alvásnak a baba pihenése. Az éjfél előtt megkezdett éjszakai alvás így pontosan a mai összesítésbe kerül.',
+    daySleepFrom: 'Nappali alvás ettől',
+    nightSleepFrom: 'Éjszakai alvás ettől',
+    dayWindowPreview: 'Nappal:',
+    nightWindowPreview: 'Éjszaka:',
+    saveBoundsBtn: 'Idők mentése',
+    toastBoundsUpdated: 'Nappali és éjszakai idősáv elmentve ✨',
+    sampleNote1: 'Séta után gyorsan elaludt',
+    sampleNote2: 'Nyugodt éjszaka',
   },
   uk: {
     currentStatus: 'Поточний стан',
@@ -718,6 +854,17 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     customStartTimeLabel: 'Точний час засинання:',
     applyBtn: 'Застосувати',
     cancelBtn: 'Скасувати',
+    sleepBoundsBtn: 'Час сну',
+    sleepBoundsModalTitle: 'Години денного та нічного сну',
+    sleepBoundsModalDesc: 'Вкажіть, з якої години у малюка зазвичай денний, а з якої — нічний сон. Нічний сон, що почався до опівночі, коректно врахується в сьогоднішній статистиці.',
+    daySleepFrom: 'Денний сон з',
+    nightSleepFrom: 'Нічний сон з',
+    dayWindowPreview: 'День:',
+    nightWindowPreview: 'Ніч:',
+    saveBoundsBtn: 'Зберегти години',
+    toastBoundsUpdated: 'Години денного та нічного сну збережено ✨',
+    sampleNote1: 'Швидко заснуло після прогулянки',
+    sampleNote2: 'Спокійна ніч',
   },
   it: {
     currentStatus: 'Stato attuale',
@@ -816,6 +963,344 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     customStartTimeLabel: 'Ora esatta di addormentamento:',
     applyBtn: 'Applica',
     cancelBtn: 'Annulla',
+    sleepBoundsBtn: 'Orari sonno',
+    sleepBoundsModalTitle: 'Orari sonno diurno e notturno',
+    sleepBoundsModalDesc: 'Imposta da che ora il bambino fa abitualmente i riposini diurni e da che ora inizia il sonno notturno. Il sonno iniziato prima di mezzanotte verrà conteggiato correttamente oggi.',
+    daySleepFrom: 'Sonno diurno dalle',
+    nightSleepFrom: 'Sonno notturno dalle',
+    dayWindowPreview: 'Giorno:',
+    nightWindowPreview: 'Notte:',
+    saveBoundsBtn: 'Salva orari',
+    toastBoundsUpdated: 'Orari diurni e notturni salvati ✨',
+    sampleNote1: 'Addormentato subito dopo la passeggiata',
+    sampleNote2: 'Notte serena',
+  },
+  es: {
+    currentStatus: 'Estado actual',
+    babySleeping: 'El bebé duerme',
+    babyAwake: 'Despierto',
+    fellAsleepAt: 'Se durmió a las',
+    timerBackgroundHint: 'El cronómetro sigue en segundo plano, puedes cerrar la app con tranquilidad.',
+    babyWokeUpBtn: 'El bebé se despertó',
+    heroTitle: 'Registra el sueño con un toque',
+    heroSubtitle: 'En cuanto acuestes a tu bebé, inicia el cronómetro de sueño.',
+    babyFellAsleepBtn: 'El bebé acaba de dormirse',
+    wakeWindow: 'Ventana de vigilia:',
+    sinceLastSleep: 'Desde el último sueño',
+    todayTotal: 'Total de hoy',
+    todayNaps: 'Sueños de hoy',
+    sessionsCount: 'registros',
+    dayNap: 'Siesta diurna',
+    nightSleep: 'Sueño nocturno',
+    average: 'Promedio',
+    addManualBtn: 'Añadir sueño manualmente',
+    date: 'Fecha',
+    from: 'Desde',
+    to: 'Hasta',
+    qualityLabel: 'Calidad del sueño',
+    qualityPeaceful: '🌿 Tranquilo',
+    qualityNormal: '😴 Normal',
+    qualityRestless: '🌪️ Inquieto',
+    notePlaceholder: 'Nota (opcional, ej. dentición)',
+    saveSessionBtn: 'Guardar registro',
+    exportCardTitle: 'Exportar a Google Drive y Hojas',
+    exportCardSubtitle: 'Descarga o comparte los datos en formato CSV',
+    exportShareBtn: 'Guardar / Compartir CSV',
+    copyCSVBtn: 'Copiar CSV',
+    copySummaryBtn: 'Resumen',
+    exportInfo: 'El archivo CSV incluye codificación UTF-8 listo para Google Drive o Google Sheets.',
+    historyTitle: 'Historial de sueño',
+    latestFirst: 'Más recientes arriba',
+    noHistory: 'Aún no hay ningún sueño registrado. Toca arriba en "El bebé acaba de dormirse".',
+    deleteTitle: 'Eliminar',
+    saveWakeUpModal: 'Guardar despertar',
+    howWasSleep: '¿Cómo durmió el bebé?',
+    discard: 'Descartar',
+    saveToHistory: 'Guardar en historial',
+    noteModalPlaceholder: 'Ej. sin despertares nocturnos',
+    toastTrackingStarted: 'Seguimiento del sueño iniciado 🌙',
+    toastSessionSaved: '¡Sueño guardado correctamente! ✨',
+    toastSessionAdded: 'Registro añadido al historial',
+    toastSessionRemoved: 'Registro eliminado',
+    toastCsvStarted: 'Guardado de CSV iniciado',
+    toastCsvShared: 'Compartido a Google Drive / app',
+    toastShared: 'Compartido a la aplicación',
+    toastCsvDownloaded: 'CSV descargado y listo para Google Drive / Hojas',
+    toastCsvCopied: 'CSV copiado (listo para pegar en Hojas)',
+    toastSummaryCopied: 'Resumen copiado al portapapeles',
+    csvHeaders: {
+      date: 'Fecha',
+      startTime: 'Hora de inicio',
+      endTime: 'Hora de fin',
+      durationMinutes: 'Duración (minutos)',
+      durationFormat: 'Duración (formato)',
+      sleepType: 'Tipo de sueño',
+      sleepQuality: 'Calidad del sueño',
+      note: 'Nota',
+    },
+    csvSummary: {
+      title: '📊 Resumen del horario de sueño',
+      todayTotal: 'Total de hoy:',
+      napsCount: 'sueños',
+      recentRecords: 'Registros recientes:',
+    },
+    calendarTitle: 'Filtrar historial por día',
+    allDays: 'Todos los días',
+    today: 'Hoy',
+    yesterday: 'Ayer',
+    pickDate: 'Elegir fecha',
+    noSessionsForDate: 'No hay registros de sueño para el día seleccionado.',
+    showAllDaysBtn: 'Mostrar todos los días',
+    showMoreSessions: 'Mostrar más registros',
+    showLessSessions: 'Mostrar menos',
+    scrollHint: 'Desliza con el dedo para ver registros anteriores',
+    dayTotalLabel: 'En este día:',
+    calendarModalTitle: 'Elegir día del calendario',
+    calendarAllDaysBtn: 'Todos los días',
+    calendarTodayBtn: 'Hoy',
+    calendarCloseBtn: 'Cerrar',
+    monthNames: [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+    ],
+    weekDaysShort: ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'],
+    editTitle: 'Editar',
+    editSessionModalTitle: 'Editar registro de sueño',
+    toastSessionUpdated: 'Registro de sueño actualizado ✨',
+    toastStartTimeUpdated: 'Hora de inicio actualizada',
+    editStartTimeBtn: 'Editar hora',
+    customStartTimeLabel: 'Hora exacta en que se durmió:',
+    applyBtn: 'Aplicar',
+    cancelBtn: 'Cancelar',
+    sleepBoundsBtn: 'Horarios',
+    sleepBoundsModalTitle: 'Horario de sueño diurno y nocturno',
+    sleepBoundsModalDesc: 'Configura a qué hora suele hacer siestas diurnas y a qué hora empieza el sueño nocturno de tu bebé. El sueño nocturno iniciado antes de medianoche se contará correctamente en el resumen de hoy.',
+    daySleepFrom: 'Sueño diurno desde',
+    nightSleepFrom: 'Sueño nocturno desde',
+    dayWindowPreview: 'Día:',
+    nightWindowPreview: 'Noche:',
+    saveBoundsBtn: 'Guardar horarios',
+    toastBoundsUpdated: 'Horarios de día y noche guardados ✨',
+    sampleNote1: 'Se durmió rápido tras el paseo',
+    sampleNote2: 'Noche tranquila',
+  },
+  ro: {
+    currentStatus: 'Stare curentă',
+    babySleeping: 'Bebelușul doarme',
+    babyAwake: 'Treaz',
+    fellAsleepAt: 'A adormit la',
+    timerBackgroundHint: 'Cronometrul rulează în fundal, poți închide liniștit aplicația.',
+    babyWokeUpBtn: 'Bebelușul s-a trezit',
+    heroTitle: 'Înregistrează somnul cu o atingere',
+    heroSubtitle: 'Imediat ce culci bebelușul, pornește cronometrul de somn.',
+    babyFellAsleepBtn: 'Bebelușul tocmai a adormit',
+    wakeWindow: 'Fereastră de veghe:',
+    sinceLastSleep: 'De la ultimul somn',
+    todayTotal: 'Total azi',
+    todayNaps: 'Somnuri azi',
+    sessionsCount: 'sesiuni',
+    dayNap: 'Somn de zi',
+    nightSleep: 'Somn de noapte',
+    average: 'Medie',
+    addManualBtn: 'Adaugă somn manual',
+    date: 'Data',
+    from: 'De la',
+    to: 'Până la',
+    qualityLabel: 'Calitatea somnului',
+    qualityPeaceful: '🌿 Liniștit',
+    qualityNormal: '😴 Normal',
+    qualityRestless: '🌪️ Agitat',
+    notePlaceholder: 'Notă (opțional, ex. dințișori)',
+    saveSessionBtn: 'Salvează sesiunea',
+    exportCardTitle: 'Export în Google Drive și Sheets',
+    exportCardSubtitle: 'Descarcă sau distribuie datele în format CSV',
+    exportShareBtn: 'Salvează / Distribuie CSV',
+    copyCSVBtn: 'Copiază CSV',
+    copySummaryBtn: 'Rezumat',
+    exportInfo: 'Fișierul CSV folosește UTF-8 și poate fi încărcat direct în Google Drive sau Google Sheets.',
+    historyTitle: 'Istoric somn',
+    latestFirst: 'Cele mai noi sus',
+    noHistory: 'Nu există încă niciun somn înregistrat. Apasă mai sus pe „Bebelușul tocmai a adormit”.',
+    deleteTitle: 'Șterge',
+    saveWakeUpModal: 'Salvează trezirea',
+    howWasSleep: 'Cum a dormit bebelușul?',
+    discard: 'Renunță',
+    saveToHistory: 'Salvează în istoric',
+    noteModalPlaceholder: 'Ex. fără treziri nocturne',
+    toastTrackingStarted: 'Monitorizarea somnului a început 🌙',
+    toastSessionSaved: 'Somnul a fost salvat cu succes! ✨',
+    toastSessionAdded: 'Sesiune adăugată în istoric',
+    toastSessionRemoved: 'Sesiune ștearsă',
+    toastCsvStarted: 'Salvarea CSV a început',
+    toastCsvShared: 'Distribuit în Google Drive / aplicație',
+    toastShared: 'Distribuit în aplicație',
+    toastCsvDownloaded: 'CSV descărcat – gata pentru Google Drive / Sheets',
+    toastCsvCopied: 'CSV copiat (poți lipi în Sheets)',
+    toastSummaryCopied: 'Rezumat copiat în clipboard',
+    csvHeaders: {
+      date: 'Data',
+      startTime: 'Ora de început',
+      endTime: 'Ora de sfârșit',
+      durationMinutes: 'Durată (minute)',
+      durationFormat: 'Durată (format)',
+      sleepType: 'Tip somn',
+      sleepQuality: 'Calitate somn',
+      note: 'Notă',
+    },
+    csvSummary: {
+      title: '📊 Rezumat program de somn',
+      todayTotal: 'Total azi:',
+      napsCount: 'somnuri',
+      recentRecords: 'Înregistrări recente:',
+    },
+    calendarTitle: 'Filtrează istoricul pe zile',
+    allDays: 'Toate zilele',
+    today: 'Azi',
+    yesterday: 'Ieri',
+    pickDate: 'Alege data',
+    noSessionsForDate: 'Nu există sesiuni de somn pentru ziua selectată.',
+    showAllDaysBtn: 'Arată toate zilele',
+    showMoreSessions: 'Arată mai multe sesiuni',
+    showLessSessions: 'Arată mai puțin',
+    scrollHint: 'Glisează cu degetul pentru sesiuni mai vechi',
+    dayTotalLabel: 'În această zi:',
+    calendarModalTitle: 'Alege ziua din calendar',
+    calendarAllDaysBtn: 'Toate zilele',
+    calendarTodayBtn: 'Azi',
+    calendarCloseBtn: 'Închide',
+    monthNames: [
+      'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+      'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie',
+    ],
+    weekDaysShort: ['Lu', 'Ma', 'Mi', 'Jo', 'Vi', 'Sâ', 'Du'],
+    editTitle: 'Editează',
+    editSessionModalTitle: 'Editează sesiunea de somn',
+    toastSessionUpdated: 'Sesiunea de somn a fost actualizată ✨',
+    toastStartTimeUpdated: 'Ora de adormire a fost actualizată',
+    editStartTimeBtn: 'Modifică ora',
+    customStartTimeLabel: 'Ora exactă a adormirii:',
+    applyBtn: 'Aplică',
+    cancelBtn: 'Anulează',
+    sleepBoundsBtn: 'Intervale',
+    sleepBoundsModalTitle: 'Orele de somn de zi și de noapte',
+    sleepBoundsModalDesc: 'Stabilește de la ce oră doarme de obicei bebelușul ziua și de la ce oră începe somnul de noapte. Somnul de noapte început înainte de miezul nopții va fi inclus corect în rezumatul de azi.',
+    daySleepFrom: 'Somn de zi de la',
+    nightSleepFrom: 'Somn de noapte de la',
+    dayWindowPreview: 'Zi:',
+    nightWindowPreview: 'Noapte:',
+    saveBoundsBtn: 'Salvează orele',
+    toastBoundsUpdated: 'Intervalele de zi și noapte au fost salvate ✨',
+    sampleNote1: 'A adormit rapid după plimbare',
+    sampleNote2: 'Noapte liniștită',
+  },
+  ar: {
+    currentStatus: 'الحالة الحالية',
+    babySleeping: 'الطفل نائم',
+    babyAwake: 'مستيقظ',
+    fellAsleepAt: 'نام في الساعة',
+    timerBackgroundHint: 'يعمل المؤقت في الخلفية، يمكنك إغلاق التطبيق بأمان.',
+    babyWokeUpBtn: 'استيقظ الطفل',
+    heroTitle: 'سجّل النوم بلمسة واحدة',
+    heroSubtitle: 'شغّل مؤقت النوم فور وضع طفلك للنوم.',
+    babyFellAsleepBtn: 'نام الطفل الآن',
+    wakeWindow: 'فترة اليقظة:',
+    sinceLastSleep: 'منذ آخر نوم',
+    todayTotal: 'مجموع اليوم',
+    todayNaps: 'جلسات اليوم',
+    sessionsCount: 'جلسات',
+    dayNap: 'نوم النهار',
+    nightSleep: 'نوم الليل',
+    average: 'المتوسط',
+    addManualBtn: 'إضافة نوم يدوياً',
+    date: 'التاريخ',
+    from: 'من',
+    to: 'إلى',
+    qualityLabel: 'جودة النوم',
+    qualityPeaceful: '🌿 هادئ',
+    qualityNormal: '😴 عادي',
+    qualityRestless: '🌪️ متقطع',
+    notePlaceholder: 'ملاحظة (اختياري، مثل التسنين)',
+    saveSessionBtn: 'حفظ السجل',
+    exportCardTitle: 'تصدير إلى Google Drive وجداول البيانات',
+    exportCardSubtitle: 'تنزيل أو مشاركة البيانات بصيغة CSV',
+    exportShareBtn: 'حفظ / مشاركة CSV',
+    copyCSVBtn: 'نسخ CSV',
+    copySummaryBtn: 'ملخص',
+    exportInfo: 'ملف CSV يدعم UTF-8 وجاهز للرفع إلى Google Drive أو Google Sheets.',
+    historyTitle: 'سجل النوم',
+    latestFirst: 'الأحدث أولاً',
+    noHistory: 'لا توجد جلسات نوم مسجلة بعد. اضغط أعلاه على «نام الطفل الآن».',
+    deleteTitle: 'حذف',
+    saveWakeUpModal: 'حفظ الاستيقاظ',
+    howWasSleep: 'كيف كان نوم الطفل؟',
+    discard: 'تجاهل',
+    saveToHistory: 'حفظ في السجل',
+    noteModalPlaceholder: 'مثال: دون استيقاظ ليلي',
+    toastTrackingStarted: 'بدأ تسجيل النوم 🌙',
+    toastSessionSaved: 'تم حفظ جلسة النوم بنجاح! ✨',
+    toastSessionAdded: 'تمت إضافة السجل إلى التاريخ',
+    toastSessionRemoved: 'تم حذف السجل',
+    toastCsvStarted: 'بدأ حفظ ملف CSV',
+    toastCsvShared: 'تمت المشاركة إلى التطبيق',
+    toastShared: 'تمت المشاركة',
+    toastCsvDownloaded: 'تم تنزيل CSV بنجاح',
+    toastCsvCopied: 'تم نسخ CSV',
+    toastSummaryCopied: 'تم نسخ الملخص',
+    csvHeaders: {
+      date: 'التاريخ',
+      startTime: 'وقت البداية',
+      endTime: 'وقت النهاية',
+      durationMinutes: 'المدة (دقائق)',
+      durationFormat: 'المدة (صيغة)',
+      sleepType: 'نوع النوم',
+      sleepQuality: 'جودة النوم',
+      note: 'ملاحظة',
+    },
+    csvSummary: {
+      title: '📊 ملخص جدول النوم',
+      todayTotal: 'مجموع اليوم:',
+      napsCount: 'جلسات',
+      recentRecords: 'أحدث السجلات:',
+    },
+    calendarTitle: 'تصفية السجل حسب اليوم',
+    allDays: 'كل الأيام',
+    today: 'اليوم',
+    yesterday: 'أمس',
+    pickDate: 'اختر تاريخاً',
+    noSessionsForDate: 'لا توجد جلسات نوم مسجلة لهذا اليوم.',
+    showAllDaysBtn: 'عرض كل الأيام',
+    showMoreSessions: 'عرض المزيد',
+    showLessSessions: 'عرض أقل',
+    scrollHint: 'اسحب بإصبعك لتصفح الجلسات الأقدم',
+    dayTotalLabel: 'في هذا اليوم:',
+    calendarModalTitle: 'اختر يوماً من التقويم',
+    calendarAllDaysBtn: 'كل الأيام',
+    calendarTodayBtn: 'اليوم',
+    calendarCloseBtn: 'إغلاق',
+    monthNames: [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+    ],
+    weekDaysShort: ['ن', 'ث', 'ر', 'خ', 'ج', 'س', 'ح'],
+    editTitle: 'تعديل',
+    editSessionModalTitle: 'تعديل سجل النوم',
+    toastSessionUpdated: 'تم تحديث سجل النوم ✨',
+    toastStartTimeUpdated: 'تم تحديث وقت بداية النوم',
+    editStartTimeBtn: 'تعديل الوقت',
+    customStartTimeLabel: 'الوقت الدقيق لبداية النوم:',
+    applyBtn: 'تطبيق',
+    cancelBtn: 'إلغاء',
+    sleepBoundsBtn: 'أوقات النوم',
+    sleepBoundsModalTitle: 'أوقات نوم النهار والليل',
+    sleepBoundsModalDesc: 'حدّد متى يبدأ عادةً نوم النهار ومتى يبدأ نوم الليل لطفلك. سيُحتسب نوم الليل الذي بدأ قبل منتصف الليل بدقة ضمن إحصاءات اليوم.',
+    daySleepFrom: 'نوم النهار من',
+    nightSleepFrom: 'نوم الليل من',
+    dayWindowPreview: 'النهار:',
+    nightWindowPreview: 'الليل:',
+    saveBoundsBtn: 'حفظ الأوقات',
+    toastBoundsUpdated: 'تم حفظ أوقات النهار والليل ✨',
+    sampleNote1: 'نام سريعاً بعد النزهة',
+    sampleNote2: 'ليلة هادئة',
   },
 };
 
@@ -827,23 +1312,97 @@ const dateLocales: Record<Language, string> = {
   hu: 'hu-HU',
   uk: 'uk-UA',
   it: 'it-IT',
+  es: 'es-ES',
+  ro: 'ro-RO',
+  ar: 'ar-SA',
 };
 
 export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
   language,
+  babyName = '',
+  babyBirthDate = '',
+  onChangeBabyBirthDate,
+  lockScreenSleepEnabled = true,
   activeSleepStart: controlledActiveSleepStart,
   sleepElapsedSeconds: controlledElapsedSeconds,
   onUpdateActiveSleepStart,
 }) => {
-  const texts = scheduleTexts[language] || scheduleTexts.en;
+  const baseTexts = scheduleTexts[language] || scheduleTexts.en;
+  const personalized = getPersonalizedSchedulePhrases(babyName, language);
+  const personalizedCopy = getPersonalizedCopy(babyName, language);
+  const wakeCopy = getWakeWindowCopy(language, babyName);
+  const lockCopy = getLockScreenCopy(language);
+  const texts: ScheduleTexts = personalized
+    ? {
+        ...baseTexts,
+        ...personalized,
+      }
+    : baseTexts;
   const currentLocale = dateLocales[language] || 'en-US';
+  const [isBirthDateModalOpen, setIsBirthDateModalOpen] = useState<boolean>(false);
+  const [draftBirthDate, setDraftBirthDate] = useState<string>(babyBirthDate);
+  const [wakeClockTick, setWakeClockTick] = useState<number>(() => Date.now());
 
-  const todayDateStr = new Date().toISOString().split('T')[0];
+  const todayDateStr = toLocalDateStr(new Date());
   const yesterdayDate = new Date(Date.now() - 24 * 3600 * 1000);
-  const yesterdayDateStr = yesterdayDate.toISOString().split('T')[0];
+  const yesterdayDateStr = toLocalDateStr(yesterdayDate);
+
+  // Customizable Day / Night sleep schedule window (persisted in localStorage)
+  const [scheduleBounds, setScheduleBounds] = useState<SleepScheduleBounds>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_BOUNDS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed?.dayStart === 'string' && typeof parsed?.nightStart === 'string') {
+          return { dayStart: parsed.dayStart, nightStart: parsed.nightStart };
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return DEFAULT_SCHEDULE_BOUNDS;
+  });
+  const [isBoundsModalOpen, setIsBoundsModalOpen] = useState<boolean>(false);
+  const [draftDayStart, setDraftDayStart] = useState<string>(scheduleBounds.dayStart);
+  const [draftNightStart, setDraftNightStart] = useState<string>(scheduleBounds.nightStart);
+
+  const handleOpenBoundsModal = () => {
+    triggerHaptic('light');
+    setDraftDayStart(scheduleBounds.dayStart);
+    setDraftNightStart(scheduleBounds.nightStart);
+    setIsBoundsModalOpen(true);
+  };
+
+  const handleSaveScheduleBounds = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!draftDayStart || !draftNightStart) return;
+    triggerHaptic('medium');
+    const nextBounds: SleepScheduleBounds = {
+      dayStart: draftDayStart,
+      nightStart: draftNightStart,
+    };
+    setScheduleBounds(nextBounds);
+    try {
+      localStorage.setItem(STORAGE_KEY_BOUNDS, JSON.stringify(nextBounds));
+    } catch {
+      // ignore
+    }
+    // Re-classify existing saved sessions based on the parent's updated day/night schedule
+    setSessions((prev) =>
+      prev.map((session) => ({
+        ...session,
+        type: classifySleepTypeByBounds(session.startTime, nextBounds),
+      }))
+    );
+    setIsBoundsModalOpen(false);
+    showToast(texts.toastBoundsUpdated);
+  };
 
   // Selected date filter (null = 'all' days, or specific ISO string 'YYYY-MM-DD')
   const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null);
+
+  // History section visibility: collapsed by default, smoothly unrolls on tap
+  const [isHistorySectionOpen, setIsHistorySectionOpen] = useState<boolean>(false);
 
   // History expanded state: default false (shows max 6), expands to 10 + touch scrolling
   const [isHistoryExpanded, setIsHistoryExpanded] = useState<boolean>(false);
@@ -918,9 +1477,9 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
     }
     // Initial sample sessions so parents immediately see the structure
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = toLocalDateStr(now);
     const yesterday = new Date(now.getTime() - 24 * 3600 * 1000);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayStr = toLocalDateStr(yesterday);
 
     return [
       {
@@ -930,7 +1489,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
         durationMinutes: 105,
         type: 'day-nap',
         quality: 'peaceful',
-        notes: language === 'sk' ? 'Zaspal rýchlo po prechádzke' : 'Fell asleep quickly after a walk',
+        notes: baseTexts.sampleNote1,
       },
       {
         id: 'sample-2',
@@ -939,7 +1498,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
         durationMinutes: 630,
         type: 'night-sleep',
         quality: 'normal',
-        notes: language === 'sk' ? 'Kľudná noc' : 'Peaceful night',
+        notes: baseTexts.sampleNote2,
       },
     ];
   });
@@ -1003,7 +1562,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
   const [modalNotes, setModalNotes] = useState('');
 
   // Manual entry form states
-  const [manualDate, setManualDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [manualDate, setManualDate] = useState(() => toLocalDateStr(new Date()));
   const [manualStartTime, setManualStartTime] = useState('13:00');
   const [manualEndTime, setManualEndTime] = useState('14:30');
   const [manualType, setManualType] = useState<SleepType>('day-nap');
@@ -1064,26 +1623,12 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
   const getQualityPlain = (q: SleepQuality) => {
     switch (q) {
       case 'peaceful':
-        return texts.qualityPeaceful.replace(/^[^\w\u00C0-\u024F\u0400-\u04FF]+\s*/, '');
+        return texts.qualityPeaceful.replace(/^[^\w\u00C0-\u024F\u0400-\u04FF\u0600-\u06FF]+\s*/, '');
       case 'normal':
-        return texts.qualityNormal.replace(/^[^\w\u00C0-\u024F\u0400-\u04FF]+\s*/, '');
+        return texts.qualityNormal.replace(/^[^\w\u00C0-\u024F\u0400-\u04FF\u0600-\u06FF]+\s*/, '');
       case 'restless':
-        return texts.qualityRestless.replace(/^[^\w\u00C0-\u024F\u0400-\u04FF]+\s*/, '');
+        return texts.qualityRestless.replace(/^[^\w\u00C0-\u024F\u0400-\u04FF\u0600-\u06FF]+\s*/, '');
     }
-  };
-
-  // Local date/time helpers for inputs
-  const toLocalDateStr = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  };
-
-  const toLocalTimeStr = (d: Date) => {
-    const h = String(d.getHours()).padStart(2, '0');
-    const m = String(d.getMinutes()).padStart(2, '0');
-    return `${h}:${m}`;
   };
 
   // 1. Live Sleep: Baby fell asleep
@@ -1134,9 +1679,8 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
     const endMs = new Date(endIso).getTime();
     const durationMin = Math.max(1, Math.round((endMs - startMs) / 60000));
 
-    // Guess day nap vs night sleep based on time of day (19:00 - 07:00 is night)
-    const hour = new Date().getHours();
-    const defaultType: SleepType = hour >= 19 || hour < 7 ? 'night-sleep' : 'day-nap';
+    // Classify day nap vs night sleep based on parent's custom day/night schedule and sleep start time
+    const defaultType: SleepType = classifySleepTypeByBounds(activeSleepStart, scheduleBounds);
 
     setPendingEndSession({
       startIso: activeSleepStart,
@@ -1314,20 +1858,44 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
     return `${m}m ${s.toString().padStart(2, '0')}s`;
   };
 
+  // Keep wake window & optimal sweet-spot indicator ticking live every 30s while awake
+  useEffect(() => {
+    if (activeSleepStart) return;
+    setWakeClockTick(Date.now());
+    const interval = window.setInterval(() => setWakeClockTick(Date.now()), 30000);
+    return () => clearInterval(interval);
+  }, [activeSleepStart, sessions.length]);
+
   // Calculate Wake Window: Time elapsed since the last finished sleep session ended
   const lastSession = sessions.length > 0 ? sessions[0] : null;
   const calculateWakeWindowMinutes = () => {
     if (!lastSession || activeSleepStart) return null;
     const endMs = new Date(lastSession.endTime).getTime();
-    const nowMs = Date.now();
-    const diffMin = Math.floor((nowMs - endMs) / 60000);
+    const diffMin = Math.floor((wakeClockTick - endMs) / 60000);
     return diffMin >= 0 ? diffMin : 0;
   };
 
   const wakeWindowMins = calculateWakeWindowMinutes();
+  const wakeEval =
+    !activeSleepStart && lastSession && wakeWindowMins !== null
+      ? evaluateWakeWindow(wakeWindowMins, lastSession.endTime, babyBirthDate)
+      : null;
 
-  // Calculate today's total sleep & breakdown
-  const todaySessions = sessions.filter((s) => s.startTime.startsWith(todayDateStr));
+  const handleOpenBirthDateModal = () => {
+    triggerHaptic('light');
+    setDraftBirthDate(babyBirthDate || '');
+    setIsBirthDateModalOpen(true);
+  };
+
+  const handleSaveBirthDate = (e: React.FormEvent) => {
+    e.preventDefault();
+    triggerHaptic('medium');
+    onChangeBabyBirthDate?.(draftBirthDate);
+    setIsBirthDateModalOpen(false);
+  };
+
+  // Calculate today's total sleep & breakdown (using local calendar date; overnight sleep counts on wake-up morning)
+  const todaySessions = sessions.filter((s) => getSessionCalendarDate(s) === todayDateStr);
   const todayTotalMins = todaySessions.reduce((acc, curr) => acc + curr.durationMinutes, 0);
   const todayNapSessions = todaySessions.filter((s) => s.type === 'day-nap');
   const todayNightSessions = todaySessions.filter((s) => s.type === 'night-sleep');
@@ -1338,9 +1906,9 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
   // Calendar Day Navigation helpers
   const handleShiftDay = (daysDelta: number) => {
     triggerHaptic('light');
-    const baseDate = selectedDateFilter ? new Date(selectedDateFilter) : new Date();
+    const baseDate = selectedDateFilter ? new Date(`${selectedDateFilter}T12:00:00`) : new Date();
     const nextDate = new Date(baseDate.getTime() + daysDelta * 24 * 3600 * 1000);
-    const nextDateStr = nextDate.toISOString().split('T')[0];
+    const nextDateStr = toLocalDateStr(nextDate);
 
     // Don't step into future
     if (nextDateStr > todayDateStr) {
@@ -1353,21 +1921,22 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
   // Format date display for calendar header (e.g. "Dnes (31. okt)")
   const formatCalendarDateLabel = (dateStr: string | null) => {
     if (!dateStr) return texts.allDays;
+    const localMidday = new Date(`${dateStr}T12:00:00`);
     if (dateStr === todayDateStr) {
-      const formatted = new Date(dateStr).toLocaleDateString(currentLocale, {
+      const formatted = localMidday.toLocaleDateString(currentLocale, {
         day: 'numeric',
         month: 'short',
       });
       return `${texts.today} (${formatted})`;
     }
     if (dateStr === yesterdayDateStr) {
-      const formatted = new Date(dateStr).toLocaleDateString(currentLocale, {
+      const formatted = localMidday.toLocaleDateString(currentLocale, {
         day: 'numeric',
         month: 'short',
       });
       return `${texts.yesterday} (${formatted})`;
     }
-    return new Date(dateStr).toLocaleDateString(currentLocale, {
+    return localMidday.toLocaleDateString(currentLocale, {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
@@ -1377,7 +1946,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
 
   // Filtered sessions based on calendar day selector
   const filteredSessions = selectedDateFilter
-    ? sessions.filter((s) => s.startTime.startsWith(selectedDateFilter))
+    ? sessions.filter((s) => getSessionCalendarDate(s) === selectedDateFilter)
     : sessions;
 
   // Calculate day metrics for filtered date
@@ -1544,6 +2113,12 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
             <p className="text-[11px] text-white/50 mt-1 max-w-xs">
               {texts.timerBackgroundHint}
             </p>
+            {lockScreenSleepEnabled && (
+              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/15 border border-indigo-400/25 text-[10px] font-medium text-indigo-200/90">
+                <Smartphone className="w-3 h-3 text-indigo-300 shrink-0" />
+                <span>{lockCopy.activeHint}</span>
+              </div>
+            )}
 
             <button
               onClick={handleBabyWokeUp}
@@ -1572,18 +2147,155 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
           </div>
         )}
 
-        {/* Wake Window & Pediatric Sweet Spot Tip */}
+        {/* Wake Window & Age-Based Optimal Sweet Spot Alert */}
         {!activeSleepStart && wakeWindowMins !== null && (
-          <div className="mt-3.5 pt-3 border-t border-white/10 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5 text-white/70">
-              <Clock className="w-3.5 h-3.5 text-indigo-300" />
-              <span>{texts.wakeWindow}</span>
-              <strong className="text-white font-semibold">{formatDuration(wakeWindowMins)}</strong>
+          <div className="mt-3.5 pt-3 border-t border-white/10 flex flex-col gap-2.5">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-1.5 text-white/75 min-w-0">
+                <Clock className="w-3.5 h-3.5 text-indigo-300 shrink-0" />
+                <span className="truncate">{texts.wakeWindow}</span>
+                <strong className="text-white font-semibold shrink-0">{formatDuration(wakeWindowMins)}</strong>
+              </div>
+
+              {wakeEval ? (
+                <button
+                  type="button"
+                  onClick={handleOpenBirthDateModal}
+                  title={wakeCopy.editAgeTitle}
+                  className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 text-amber-200 flex items-center gap-1 shrink-0 active:scale-95 transition-all"
+                >
+                  <Cake className="w-2.5 h-2.5 text-amber-300" />
+                  <span>{formatShortAge(wakeEval.age, language)}</span>
+                </button>
+              ) : (
+                <span className="text-[10px] text-white/50 px-2 py-0.5 rounded-full bg-white/5 border border-white/10 shrink-0">
+                  {texts.sinceLastSleep}
+                </span>
+              )}
             </div>
 
-            <span className="text-[10px] text-white/50 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
-              {texts.sinceLastSleep}
-            </span>
+            {wakeEval ? (
+              <div
+                className={`p-3 rounded-2xl border flex flex-col gap-2 transition-all ${
+                  wakeEval.status === 'overtired'
+                    ? 'bg-rose-500/15 border-rose-400/40'
+                    : wakeEval.status === 'sweet-spot'
+                    ? 'bg-emerald-500/15 border-emerald-400/40'
+                    : wakeEval.status === 'approaching'
+                    ? 'bg-amber-400/15 border-amber-400/35'
+                    : 'bg-white/[0.04] border-white/10'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${
+                      wakeEval.status === 'overtired'
+                        ? 'text-rose-200'
+                        : wakeEval.status === 'sweet-spot'
+                        ? 'text-emerald-200'
+                        : wakeEval.status === 'approaching'
+                        ? 'text-amber-200'
+                        : 'text-indigo-200'
+                    }`}
+                  >
+                    <BellRing
+                      className={`w-3.5 h-3.5 shrink-0 ${
+                        wakeEval.status === 'sweet-spot' || wakeEval.status === 'overtired'
+                          ? 'animate-pulse'
+                          : ''
+                      }`}
+                    />
+                    <span>
+                      {wakeEval.status === 'overtired'
+                        ? wakeCopy.badgeOvertired
+                        : wakeEval.status === 'sweet-spot'
+                        ? wakeCopy.badgeSweetSpot
+                        : wakeEval.status === 'approaching'
+                        ? wakeCopy.badgeApproaching
+                        : wakeCopy.badgeFresh}
+                    </span>
+                  </span>
+
+                  <span className="text-[10px] font-mono text-white/65 shrink-0" dir="ltr">
+                    {formatWakeDuration(wakeEval.minWakeMins)} – {formatWakeDuration(wakeEval.maxWakeMins)}
+                  </span>
+                </div>
+
+                {/* Progress bar with highlighted optimal sweet-spot window */}
+                <div className="relative h-2 rounded-full bg-slate-950/80 border border-white/10 overflow-hidden" dir="ltr">
+                  {/* Optimal Sweet Spot zone highlight */}
+                  <div
+                    className="absolute top-0 bottom-0 bg-emerald-400/25 border-x border-emerald-300/40"
+                    style={{
+                      left: `${wakeEval.sweetSpotStartPercent}%`,
+                      width: `${Math.max(4, wakeEval.sweetSpotEndPercent - wakeEval.sweetSpotStartPercent)}%`,
+                    }}
+                  />
+                  {/* Current wake progress fill */}
+                  <div
+                    className={`absolute top-0 bottom-0 left-0 rounded-full transition-all duration-700 ${
+                      wakeEval.status === 'overtired'
+                        ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400'
+                        : wakeEval.status === 'sweet-spot'
+                        ? 'bg-gradient-to-r from-indigo-400 to-emerald-400'
+                        : wakeEval.status === 'approaching'
+                        ? 'bg-gradient-to-r from-indigo-400 to-amber-300'
+                        : 'bg-gradient-to-r from-indigo-400 to-sky-400'
+                    }`}
+                    style={{ width: `${wakeEval.progressPercent}%` }}
+                  />
+                </div>
+
+                <p className="text-[11px] text-white/80 leading-relaxed">
+                  {wakeEval.status === 'overtired'
+                    ? wakeCopy.msgOvertired(formatWakeDuration(Math.max(1, wakeEval.minutesOverdue)))
+                    : wakeEval.status === 'sweet-spot'
+                    ? wakeCopy.msgSweetSpot(wakeEval.sweetSpotStartTime, wakeEval.sweetSpotEndTime)
+                    : wakeEval.status === 'approaching'
+                    ? wakeCopy.msgApproaching(
+                        formatWakeDuration(Math.max(1, wakeEval.minutesUntilSweetSpot)),
+                        wakeEval.sweetSpotStartTime
+                      )
+                    : wakeCopy.msgFresh(
+                        formatWakeDuration(Math.max(1, wakeEval.minutesUntilSweetSpot)),
+                        wakeEval.sweetSpotStartTime,
+                        wakeEval.sweetSpotEndTime
+                      )}
+                </p>
+
+                <div className="pt-1.5 border-t border-white/10 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[10px] text-white/50">
+                  <span className="font-medium text-white/65">
+                    {wakeCopy.dailyTargetLabel(wakeEval.age.dailySleepRangeHours, wakeEval.age.guidelineSource)}
+                  </span>
+                  <span>{wakeCopy.sleepCuesHint}</span>
+                </div>
+              </div>
+            ) : (
+              onChangeBabyBirthDate && (
+                <button
+                  type="button"
+                  onClick={handleOpenBirthDateModal}
+                  className="w-full py-2 px-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-dashed border-amber-400/35 text-amber-200/90 text-[11px] font-medium flex items-center justify-center gap-1.5 active:scale-[0.99] transition-all touch-manipulation"
+                >
+                  <Cake className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                  <span className="truncate">{wakeCopy.setupPromptBtn}</span>
+                </button>
+              )
+            )}
+          </div>
+        )}
+
+        {/* Quick Birth Date Setup when no prior sleep session exists yet */}
+        {!activeSleepStart && wakeWindowMins === null && !babyBirthDate && onChangeBabyBirthDate && (
+          <div className="mt-3 pt-3 border-t border-white/10">
+            <button
+              type="button"
+              onClick={handleOpenBirthDateModal}
+              className="w-full py-2 px-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-dashed border-amber-400/35 text-amber-200/90 text-[11px] font-medium flex items-center justify-center gap-1.5 active:scale-[0.99] transition-all touch-manipulation"
+            >
+              <Cake className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+              <span className="truncate">{wakeCopy.setupPromptBtn}</span>
+            </button>
           </div>
         )}
       </div>
@@ -1626,35 +2338,48 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
           </div>
         </div>
 
-        {/* Subtle sub-metrics breakdown row if there are sessions today */}
-        {todaySessions.length > 0 && (
-          <div className="pt-2.5 border-t border-white/5 grid grid-cols-3 gap-1 text-[11px] text-white/60">
-            <div className="flex flex-col">
-              <span className="text-[9px] uppercase tracking-wider text-white/40">
+        {/* Subtle sub-metrics breakdown row (Day Sleep, Night Sleep, Average) + small Day/Night schedule button */}
+        <div className="pt-2.5 border-t border-white/5 flex items-end justify-between gap-2 text-[11px] text-white/60">
+          <div className="flex-1 grid grid-cols-3 gap-1.5 min-w-0">
+            <div className="flex flex-col min-w-0">
+              <span className="text-[9px] uppercase tracking-wider text-white/40 truncate">
                 {texts.dayNap}
               </span>
-              <span className="font-semibold text-white/80">
+              <span className="font-semibold text-white/85">
                 {formatDuration(todayNapMins)}
               </span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-[9px] uppercase tracking-wider text-white/40">
+            <div className="flex flex-col min-w-0">
+              <span className="text-[9px] uppercase tracking-wider text-white/40 truncate">
                 {texts.nightSleep}
               </span>
-              <span className="font-semibold text-white/80">
+              <span className="font-semibold text-white/85">
                 {formatDuration(todayNightMins)}
               </span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-[9px] uppercase tracking-wider text-white/40">
+            <div className="flex flex-col min-w-0">
+              <span className="text-[9px] uppercase tracking-wider text-white/40 truncate">
                 {texts.average}
               </span>
-              <span className="font-semibold text-white/80">
+              <span className="font-semibold text-white/85">
                 {formatDuration(todayAvgMins)}
               </span>
             </div>
           </div>
-        )}
+
+          <button
+            type="button"
+            onClick={handleOpenBoundsModal}
+            title={texts.sleepBoundsModalTitle}
+            aria-label={texts.sleepBoundsModalTitle}
+            className="h-8 px-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.14] active:scale-95 border border-white/10 text-amber-200/85 hover:text-amber-200 flex items-center gap-1 text-[10px] font-medium transition-all touch-manipulation shrink-0"
+          >
+            <SlidersHorizontal className="w-3 h-3 text-amber-300 shrink-0" />
+            <span className="font-mono tracking-tight" dir="ltr">
+              {scheduleBounds.dayStart}–{scheduleBounds.nightStart}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Manual Entry Toggle */}
@@ -1794,29 +2519,57 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
         )}
       </div>
 
-      {/* History Section Header with Day/Calendar Switcher */}
-      <div className="flex flex-col gap-2.5">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white/70">
+      {/* Collapsible Sleep History Section (collapsed by default, smooth unroll on click) */}
+      <div className="rounded-2xl border border-white/10 bg-slate-900/50 overflow-hidden transition-colors">
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic('light');
+            setIsHistorySectionOpen((prev) => !prev);
+          }}
+          aria-expanded={isHistorySectionOpen}
+          className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-white/5 active:bg-white/10 transition-colors touch-manipulation"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <History className="w-4 h-4 text-indigo-400 shrink-0" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white/80 truncate">
               {texts.historyTitle}
             </h3>
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/10 font-bold text-white/80">
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/10 font-bold text-white/85 shrink-0">
               {filteredSessions.length}
             </span>
           </div>
 
-          {selectedDateFilter ? (
-            <span className="text-[11px] text-amber-300/80 font-medium">
-              {texts.dayTotalLabel} {formatDuration(filteredDayTotalMins)}
-            </span>
-          ) : (
-            sessions.length > 0 && (
-              <span className="text-[11px] text-white/40">{texts.latestFirst}</span>
-            )
-          )}
-        </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {selectedDateFilter ? (
+              <span className="text-[11px] text-amber-300/85 font-medium">
+                {texts.dayTotalLabel} {formatDuration(filteredDayTotalMins)}
+              </span>
+            ) : (
+              sessions.length > 0 && isHistorySectionOpen && (
+                <span className="text-[11px] text-white/40 hidden xs:inline">{texts.latestFirst}</span>
+              )
+            )}
+            <ChevronDown
+              className={`w-4 h-4 text-white/60 transition-transform duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                isHistorySectionOpen ? 'rotate-180 text-amber-300' : ''
+              }`}
+            />
+          </div>
+        </button>
 
+        {/* Smooth CSS Grid accordion unroll container */}
+        <div
+          className={`grid transition-[grid-template-rows,opacity] duration-[460ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            isHistorySectionOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div
+              className={`p-3 pt-2.5 border-t border-white/5 flex flex-col gap-2.5 transition-transform duration-[460ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                isHistorySectionOpen ? 'translate-y-0' : '-translate-y-2'
+              }`}
+            >
         {/* Calendar Day Switcher Toolbar */}
         <div className="p-3 rounded-2xl bg-slate-900/60 border border-white/10 flex flex-col gap-2 shadow-sm">
           {/* Quick preset chips */}
@@ -2040,6 +2793,9 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
             )}
           </div>
         )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Completion Modal when stopping Live Sleep Timer */}
@@ -2392,7 +3148,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
                   const isSelected = selectedDateFilter === dayDateStr;
                   const isToday = todayDateStr === dayDateStr;
                   const isFuture = dayDateStr > todayDateStr;
-                  const hasSessions = sessions.some((s) => s.startTime.startsWith(dayDateStr));
+                  const hasSessions = sessions.some((s) => getSessionCalendarDate(s) === dayDateStr);
 
                   cells.push(
                     <button
@@ -2464,6 +3220,204 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Day & Night Sleep Hours Configuration Modal */}
+      {isBoundsModalOpen && (
+        <div
+          onClick={() => setIsBoundsModalOpen(false)}
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+        >
+          <form
+            onSubmit={handleSaveScheduleBounds}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-3xl bg-slate-900 border border-white/20 p-5 flex flex-col gap-4 shadow-2xl animate-in zoom-in-95 duration-200"
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/30 text-amber-300 flex items-center justify-center">
+                  <SlidersHorizontal className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-white">
+                  {texts.sleepBoundsModalTitle}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setIsBoundsModalOpen(false);
+                }}
+                className="p-1.5 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-white/65 leading-relaxed">
+              {personalizedCopy?.sleepBoundsModalDesc ?? texts.sleepBoundsModalDesc}
+            </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-2xl bg-amber-400/10 border border-amber-400/25 flex flex-col gap-1.5">
+                <label className="text-[10px] uppercase tracking-wider text-amber-200/80 font-semibold flex items-center gap-1.5">
+                  <Sun className="w-3.5 h-3.5 text-amber-300" />
+                  <span>{texts.daySleepFrom}</span>
+                </label>
+                <input
+                  type="time"
+                  value={draftDayStart}
+                  onChange={(e) => setDraftDayStart(e.target.value)}
+                  className="w-full h-10 px-2.5 rounded-xl bg-slate-950 border border-white/15 text-sm font-mono text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  required
+                />
+              </div>
+
+              <div className="p-3 rounded-2xl bg-indigo-500/15 border border-indigo-400/30 flex flex-col gap-1.5">
+                <label className="text-[10px] uppercase tracking-wider text-indigo-200/80 font-semibold flex items-center gap-1.5">
+                  <Moon className="w-3.5 h-3.5 text-indigo-300" />
+                  <span>{texts.nightSleepFrom}</span>
+                </label>
+                <input
+                  type="time"
+                  value={draftNightStart}
+                  onChange={(e) => setDraftNightStart(e.target.value)}
+                  className="w-full h-10 px-2.5 rounded-xl bg-slate-950 border border-white/15 text-sm font-mono text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Visual preview bar */}
+            <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-between text-[11px] gap-2">
+              <div className="flex items-center gap-1.5 text-amber-200">
+                <Sun className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                <span>{texts.dayWindowPreview}</span>
+                <strong className="font-mono" dir="ltr">
+                  {draftDayStart} – {draftNightStart}
+                </strong>
+              </div>
+              <div className="flex items-center gap-1.5 text-indigo-200">
+                <Moon className="w-3.5 h-3.5 text-indigo-300 shrink-0" />
+                <span>{texts.nightWindowPreview}</span>
+                <strong className="font-mono" dir="ltr">
+                  {draftNightStart} – {draftDayStart}
+                </strong>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setIsBoundsModalOpen(false);
+                }}
+                className="py-2.5 px-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white/75 font-semibold text-xs active:scale-95 transition-all"
+              >
+                {texts.cancelBtn}
+              </button>
+
+              <button
+                type="submit"
+                className="flex-1 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs shadow-md active:scale-95 transition-all"
+              >
+                {texts.saveBoundsBtn}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Child Birth Date Quick Modal for Age-Based Optimal Wake Window */}
+      {isBirthDateModalOpen && (
+        <div
+          onClick={() => setIsBirthDateModalOpen(false)}
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+        >
+          <form
+            onSubmit={handleSaveBirthDate}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-3xl bg-slate-900 border border-white/20 p-5 flex flex-col gap-4 shadow-2xl animate-in zoom-in-95 duration-200"
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/30 text-amber-300 flex items-center justify-center">
+                  <Cake className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-white">
+                  {wakeCopy.modalTitle}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setIsBirthDateModalOpen(false);
+                }}
+                className="p-1.5 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-white/65 leading-relaxed">
+              {wakeCopy.modalDesc}
+            </p>
+
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="schedule-baby-birthdate"
+                className="text-[10px] uppercase tracking-wider text-amber-200/80 font-semibold"
+              >
+                {wakeCopy.birthDateLabel}
+              </label>
+              <input
+                id="schedule-baby-birthdate"
+                type="date"
+                value={draftBirthDate}
+                max={todayDateStr}
+                onChange={(e) => setDraftBirthDate(e.target.value)}
+                className="w-full h-11 px-3 rounded-xl bg-slate-950 border border-white/20 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              {draftBirthDate && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setDraftBirthDate('');
+                    onChangeBabyBirthDate?.('');
+                    setIsBirthDateModalOpen(false);
+                  }}
+                  className="py-2.5 px-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white/75 font-semibold text-xs active:scale-95 transition-all"
+                >
+                  {wakeCopy.birthDateClear}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setIsBirthDateModalOpen(false);
+                }}
+                className="py-2.5 px-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white/75 font-semibold text-xs active:scale-95 transition-all"
+              >
+                {wakeCopy.cancelBtn}
+              </button>
+
+              <button
+                type="submit"
+                className="flex-1 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs shadow-md active:scale-95 transition-all"
+              >
+                {wakeCopy.saveBtn}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

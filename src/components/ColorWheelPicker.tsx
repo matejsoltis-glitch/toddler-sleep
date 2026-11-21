@@ -313,7 +313,7 @@ export const ColorWheelPicker: React.FC<ColorWheelPickerProps> = ({
       {/* Lightness / Softness Adjuster */}
       <div className="flex flex-col gap-1 px-1">
         <div className="flex items-center justify-between text-[11px] text-white/70">
-          <span>{language === 'sk' ? 'Svetlosť / Jemnosť' : 'Softness / Lightness'}</span>
+          <span>{t.lightnessLabel}</span>
           <span className="font-mono text-[10px] text-amber-300">{lightness}%</span>
         </div>
         <input
@@ -335,7 +335,7 @@ export const ColorWheelPicker: React.FC<ColorWheelPickerProps> = ({
       {/* Quick curated baby-friendly presets */}
       <div className="flex flex-col gap-1.5 pt-1">
         <span className="text-[10px] text-white/50 px-1">
-          {language === 'sk' ? 'Rýchle upokojujúce tóny' : 'Quick soothing shades'}
+          {t.quickShadesLabel}
         </span>
         <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none px-0.5">
           {QUICK_BABY_PRESETS.map((preset) => (

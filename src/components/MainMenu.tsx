@@ -4,9 +4,11 @@ import { AppMode, Language } from '../types';
 import { translations } from '../i18n/translations';
 import { triggerHaptic } from '../utils/haptics';
 import { LiquidSlider } from './LiquidSlider';
+import { getPersonalizedSchedulePhrases } from '../utils/babyName';
 
 interface MainMenuProps {
   language: Language;
+  babyName?: string;
   onSelectMode: (mode: AppMode) => void;
   isLightActive: boolean;
   isWhiteNoiseActive: boolean;
@@ -26,6 +28,7 @@ interface MainMenuProps {
 
 export const MainMenu: React.FC<MainMenuProps> = ({
   language,
+  babyName = '',
   onSelectMode,
   isLightActive,
   isWhiteNoiseActive,
@@ -42,6 +45,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   isScheduleActive = false,
 }) => {
   const t = translations[language];
+  const personalizedSchedule = getPersonalizedSchedulePhrases(babyName, language);
 
   const formatTimer = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -51,7 +55,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
   const isAnyPlaying = isLightActive || isWhiteNoiseActive || isNatureActive;
 
-  // Single-word labels for master sliders localized across 7 languages
+  // Single-word labels for master sliders localized across all 10 languages
   const sliderLabels: Record<Language, { volume: string; brightness: string; opacity: string }> = {
     sk: { volume: 'Hlasitosť', brightness: 'Jas', opacity: 'Priehľadnosť' },
     cs: { volume: 'Hlasitost', brightness: 'Jas', opacity: 'Průhlednost' },
@@ -60,6 +64,9 @@ export const MainMenu: React.FC<MainMenuProps> = ({
     hu: { volume: 'Hangerő', brightness: 'Fényerő', opacity: 'Átlátszóság' },
     uk: { volume: 'Гучність', brightness: 'Яскравість', opacity: 'Прозорість' },
     it: { volume: 'Volume', brightness: 'Luminosità', opacity: 'Trasparenza' },
+    es: { volume: 'Volumen', brightness: 'Brillo', opacity: 'Opacidad' },
+    ro: { volume: 'Volum', brightness: 'Luminozitate', opacity: 'Opacitate' },
+    ar: { volume: 'الصوت', brightness: 'السطوع', opacity: 'الشفافية' },
   };
   const sliderNames = sliderLabels[language] || sliderLabels.en;
 
@@ -96,13 +103,15 @@ export const MainMenu: React.FC<MainMenuProps> = ({
     },
     {
       id: 'schedule' as AppMode,
-      title: t.modes.schedule?.tabTitle || (language === 'sk' ? 'Asistent spánkového režimu' : 'Schedule Assistant'),
-      subtitle: t.modes.schedule?.tabSubtitle || (language === 'sk' ? 'Sledovanie bdelosti, spánku a história' : 'Track naps, wake windows & export'),
+      title: t.modes.schedule?.tabTitle || 'Schedule Assistant',
+      subtitle: t.modes.schedule?.tabSubtitle || 'Track naps, wake windows & export',
       icon: Calendar,
       gradient: 'from-violet-500/20 via-purple-500/15 to-indigo-500/10 border-violet-500/30 text-violet-300',
       iconBg: 'bg-violet-400 text-slate-950 shadow-violet-400/30',
       isActive: Boolean(isScheduleActive),
-      activeBadge: t.modes.schedule?.activeBadge || 'Aktívny',
+      activeBadge: personalizedSchedule
+        ? personalizedSchedule.babySleeping
+        : (t.modes.schedule?.activeBadge || 'Active'),
     },
   ];
 
