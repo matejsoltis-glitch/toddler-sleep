@@ -27,6 +27,55 @@ jobs:
           distribution: 'zulu'
           java-version: '21'
 
+      - name: Verify Keystore & Signing Secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          trap 'rm -f /tmp/check.keystore' EXIT
+
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Secret KEYSTORE_BASE64 je prázdny alebo chýba v GitHub Secrets."
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > /tmp/check.keystore
+
+          STORE_PASS="$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '\r\n')"
+          if [ -z "$STORE_PASS" ]; then
+            echo "::error::Secret KEYSTORE_PASSWORD je prázdny alebo chýba v GitHub Secrets."
+            exit 1
+          fi
+
+          if ! keytool -list -keystore /tmp/check.keystore -storepass "$STORE_PASS" >/dev/null 2>&1; then
+            TRIMMED_PASS="$(printf '%s' "$STORE_PASS" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+            if [ -n "$TRIMMED_PASS" ] && keytool -list -keystore /tmp/check.keystore -storepass "$TRIMMED_PASS" >/dev/null 2>&1; then
+              STORE_PASS="$TRIMMED_PASS"
+            else
+              echo "::error::Secret KEYSTORE_PASSWORD nesedí s keystore v KEYSTORE_BASE64. Skontroluj v GitHub Settings -> Secrets presnú hodnotu KEYSTORE_PASSWORD a KEYSTORE_BASE64."
+              exit 1
+            fi
+          fi
+
+          ALIAS_VAL="$(printf '%s' "$KEY_ALIAS" | tr -d '\r\n')"
+          if [ -z "$ALIAS_VAL" ]; then
+            echo "::error::Secret KEY_ALIAS je prázdny alebo chýba v GitHub Secrets."
+            exit 1
+          fi
+
+          if ! keytool -list -keystore /tmp/check.keystore -storepass "$STORE_PASS" -alias "$ALIAS_VAL" >/dev/null 2>&1; then
+            TRIMMED_ALIAS="$(printf '%s' "$ALIAS_VAL" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+            if [ -n "$TRIMMED_ALIAS" ] && keytool -list -keystore /tmp/check.keystore -storepass "$STORE_PASS" -alias "$TRIMMED_ALIAS" >/dev/null 2>&1; then
+              ALIAS_VAL="$TRIMMED_ALIAS"
+            else
+              echo "::error::Secret KEY_ALIAS sa nenašiel v keystore. Skontroluj presný názov aliasu kľúča v GitHub Secrets."
+              exit 1
+            fi
+          fi
+
+          echo "Keystore, heslo aj alias sú overené a sedia."
+
       - name: Install dependencies
         run: |
           npm install --legacy-peer-deps
@@ -334,12 +383,28 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          STORE_PASS="$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '\r\n')"
+          if ! keytool -list -keystore app/release.keystore -storepass "$STORE_PASS" >/dev/null 2>&1; then
+            STORE_PASS="$(printf '%s' "$STORE_PASS" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          fi
+
+          ALIAS_VAL="$(printf '%s' "$KEY_ALIAS" | tr -d '\r\n')"
+          if ! keytool -list -keystore app/release.keystore -storepass "$STORE_PASS" -alias "$ALIAS_VAL" >/dev/null 2>&1; then
+            ALIAS_VAL="$(printf '%s' "$ALIAS_VAL" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          fi
+
+          KEY_PASS="$(printf '%s' "$KEY_PASSWORD" | tr -d '\r\n')"
+          TRIMMED_KEY_PASS="$(printf '%s' "$KEY_PASS" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          if [ -z "$TRIMMED_KEY_PASS" ] || [ "$TRIMMED_KEY_PASS" = "$STORE_PASS" ]; then
+            KEY_PASS="$STORE_PASS"
+          fi
+
           chmod +x gradlew
           ./gradlew bundleRelease \
             -Pandroid.injected.signing.store.file="$(pwd)/app/release.keystore" \
-            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
-            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
-            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+            -Pandroid.injected.signing.store.password="$STORE_PASS" \
+            -Pandroid.injected.signing.key.alias="$ALIAS_VAL" \
+            -Pandroid.injected.signing.key.password="$KEY_PASS"
 
       - name: Cleanup Keystore
         if: always()
