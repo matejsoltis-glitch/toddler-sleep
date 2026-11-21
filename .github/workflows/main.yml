@@ -30,7 +30,7 @@ jobs:
       - name: Verify Keystore & Signing Secrets
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
@@ -42,9 +42,9 @@ jobs:
           fi
           printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > /tmp/check.keystore
 
-          STORE_PASS="$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '\r\n')"
+          STORE_PASS="$(printf '%s' "$STORE_PASSWORD" | tr -d '\r\n')"
           if [ -z "$STORE_PASS" ]; then
-            echo "::error::Secret KEYSTORE_PASSWORD je prázdny alebo chýba v GitHub Secrets."
+            echo "::error::Secret STORE_PASSWORD je prázdny alebo chýba v GitHub Secrets."
             exit 1
           fi
 
@@ -53,7 +53,7 @@ jobs:
             if [ -n "$TRIMMED_PASS" ] && keytool -list -keystore /tmp/check.keystore -storepass "$TRIMMED_PASS" >/dev/null 2>&1; then
               STORE_PASS="$TRIMMED_PASS"
             else
-              echo "::error::Secret KEYSTORE_PASSWORD nesedí s keystore v KEYSTORE_BASE64. Skontroluj v GitHub Settings -> Secrets presnú hodnotu KEYSTORE_PASSWORD a KEYSTORE_BASE64."
+              echo "::error::Secret STORE_PASSWORD nesedí s keystore v KEYSTORE_BASE64. Skontroluj v GitHub Settings -> Secrets presnú hodnotu STORE_PASSWORD a KEYSTORE_BASE64."
               exit 1
             fi
           fi
@@ -379,11 +379,11 @@ jobs:
       - name: Build Signed Android App Bundle (.aab)
         working-directory: android
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          STORE_PASS="$(printf '%s' "$KEYSTORE_PASSWORD" | tr -d '\r\n')"
+          STORE_PASS="$(printf '%s' "$STORE_PASSWORD" | tr -d '\r\n')"
           if ! keytool -list -keystore app/release.keystore -storepass "$STORE_PASS" >/dev/null 2>&1; then
             STORE_PASS="$(printf '%s' "$STORE_PASS" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
           fi
