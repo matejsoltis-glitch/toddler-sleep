@@ -15,6 +15,8 @@ export interface AgeSummary {
   maxWakeMins: number;
   /** Official 24-hour total sleep guideline (WHO/NSF for 0-3m; AASM/AAP for 4m+) */
   dailySleepRangeHours: string;
+  dailySleepMinHours: number;
+  dailySleepMaxHours: number;
   guidelineSource: 'WHO/NSF' | 'AASM/AAP';
   /** True for preschoolers (36m+) who may be transitioning out of or no longer taking daytime naps */
   isPreschoolNoNapPossible: boolean;
@@ -47,53 +49,55 @@ function getRecommendedWakeGuidance(ageMonths: number): {
   min: number;
   max: number;
   dailySleepRangeHours: string;
+  dailySleepMinHours: number;
+  dailySleepMaxHours: number;
   guidelineSource: 'WHO/NSF' | 'AASM/AAP';
   isPreschoolNoNapPossible: boolean;
 } {
   if (ageMonths < 1) {
-    return { min: 35, max: 60, dailySleepRangeHours: '14–17 h', guidelineSource: 'WHO/NSF', isPreschoolNoNapPossible: false };
+    return { min: 35, max: 60, dailySleepRangeHours: '14–17 h', dailySleepMinHours: 14, dailySleepMaxHours: 17, guidelineSource: 'WHO/NSF', isPreschoolNoNapPossible: false };
   }
   if (ageMonths < 2) {
-    return { min: 45, max: 75, dailySleepRangeHours: '14–17 h', guidelineSource: 'WHO/NSF', isPreschoolNoNapPossible: false };
+    return { min: 45, max: 75, dailySleepRangeHours: '14–17 h', dailySleepMinHours: 14, dailySleepMaxHours: 17, guidelineSource: 'WHO/NSF', isPreschoolNoNapPossible: false };
   }
   if (ageMonths < 3) {
-    return { min: 60, max: 90, dailySleepRangeHours: '14–17 h', guidelineSource: 'WHO/NSF', isPreschoolNoNapPossible: false };
+    return { min: 60, max: 90, dailySleepRangeHours: '14–17 h', dailySleepMinHours: 14, dailySleepMaxHours: 17, guidelineSource: 'WHO/NSF', isPreschoolNoNapPossible: false };
   }
   if (ageMonths < 4) {
-    return { min: 75, max: 120, dailySleepRangeHours: '14–17 h', guidelineSource: 'WHO/NSF', isPreschoolNoNapPossible: false };
+    return { min: 75, max: 120, dailySleepRangeHours: '14–17 h', dailySleepMinHours: 14, dailySleepMaxHours: 17, guidelineSource: 'WHO/NSF', isPreschoolNoNapPossible: false };
   }
   if (ageMonths < 5) {
-    return { min: 90, max: 135, dailySleepRangeHours: '12–16 h', guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
+    return { min: 90, max: 135, dailySleepRangeHours: '12–16 h', dailySleepMinHours: 12, dailySleepMaxHours: 16, guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
   }
   if (ageMonths < 6) {
-    return { min: 120, max: 150, dailySleepRangeHours: '12–16 h', guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
+    return { min: 120, max: 150, dailySleepRangeHours: '12–16 h', dailySleepMinHours: 12, dailySleepMaxHours: 16, guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
   }
   if (ageMonths < 8) {
-    return { min: 135, max: 180, dailySleepRangeHours: '12–16 h', guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
+    return { min: 135, max: 180, dailySleepRangeHours: '12–16 h', dailySleepMinHours: 12, dailySleepMaxHours: 16, guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
   }
   if (ageMonths < 10) {
-    return { min: 165, max: 210, dailySleepRangeHours: '12–16 h', guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
+    return { min: 165, max: 210, dailySleepRangeHours: '12–16 h', dailySleepMinHours: 12, dailySleepMaxHours: 16, guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
   }
   if (ageMonths < 12) {
-    return { min: 180, max: 240, dailySleepRangeHours: '12–16 h', guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
+    return { min: 180, max: 240, dailySleepRangeHours: '12–16 h', dailySleepMinHours: 12, dailySleepMaxHours: 16, guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
   }
   if (ageMonths < 15) {
-    return { min: 210, max: 270, dailySleepRangeHours: '11–14 h', guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
+    return { min: 210, max: 270, dailySleepRangeHours: '11–14 h', dailySleepMinHours: 11, dailySleepMaxHours: 14, guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
   }
   if (ageMonths < 18) {
-    return { min: 270, max: 330, dailySleepRangeHours: '11–14 h', guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
+    return { min: 270, max: 330, dailySleepRangeHours: '11–14 h', dailySleepMinHours: 11, dailySleepMaxHours: 14, guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
   }
   if (ageMonths < 24) {
-    return { min: 300, max: 360, dailySleepRangeHours: '11–14 h', guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
+    return { min: 300, max: 360, dailySleepRangeHours: '11–14 h', dailySleepMinHours: 11, dailySleepMaxHours: 14, guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
   }
   if (ageMonths < 36) {
-    return { min: 330, max: 420, dailySleepRangeHours: '11–14 h', guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
+    return { min: 330, max: 420, dailySleepRangeHours: '11–14 h', dailySleepMinHours: 11, dailySleepMaxHours: 14, guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: false };
   }
   if (ageMonths < 48) {
-    return { min: 360, max: 480, dailySleepRangeHours: '10–13 h', guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: true };
+    return { min: 360, max: 480, dailySleepRangeHours: '10–13 h', dailySleepMinHours: 10, dailySleepMaxHours: 13, guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: true };
   }
   // 4+ years: most children no longer nap during the day (typical daytime wake span 11–13 h)
-  return { min: 660, max: 780, dailySleepRangeHours: '10–13 h', guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: true };
+  return { min: 660, max: 780, dailySleepRangeHours: '10–13 h', dailySleepMinHours: 10, dailySleepMaxHours: 13, guidelineSource: 'AASM/AAP', isPreschoolNoNapPossible: true };
 }
 
 export function getChildAgeSummary(birthDateStr?: string | null): AgeSummary | null {
@@ -129,6 +133,8 @@ export function getChildAgeSummary(birthDateStr?: string | null): AgeSummary | n
     minWakeMins: guidance.min,
     maxWakeMins: guidance.max,
     dailySleepRangeHours: guidance.dailySleepRangeHours,
+    dailySleepMinHours: guidance.dailySleepMinHours,
+    dailySleepMaxHours: guidance.dailySleepMaxHours,
     guidelineSource: guidance.guidelineSource,
     isPreschoolNoNapPossible: guidance.isPreschoolNoNapPossible,
   };

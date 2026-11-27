@@ -4,7 +4,7 @@ import { normalizeBabyName } from '../utils/babyName';
 
 export const LOCKSCREEN_SLEEP_STORAGE_KEY = 'toddler_lockscreen_sleep_enabled';
 
-interface SleepLockScreenPlugin {
+export interface SleepLockScreenPlugin {
   showOngoingSleep(options: {
     title: string;
     body: string;
@@ -14,9 +14,21 @@ interface SleepLockScreenPlugin {
   hideOngoingSleep(): Promise<{ hidden: boolean }>;
   checkNotificationPermission(): Promise<{ granted: boolean }>;
   requestNotificationPermission(): Promise<{ granted: boolean }>;
+  scheduleWakeReminder(options: {
+    title: string;
+    body: string;
+    triggerAtMs: number;
+    channelName: string;
+  }): Promise<{ scheduled: boolean; reason?: string }>;
+  cancelWakeReminder(): Promise<{ cancelled: boolean }>;
+  showInstantWakeReminder(options: {
+    title: string;
+    body: string;
+    channelName: string;
+  }): Promise<{ shown: boolean; reason?: string }>;
 }
 
-const SleepLockScreenNotification = registerPlugin<SleepLockScreenPlugin>(
+export const SleepLockScreenNotification = registerPlugin<SleepLockScreenPlugin>(
   'SleepLockScreenNotification'
 );
 

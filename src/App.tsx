@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon } from 'lucide-react';
+import { Moon, Bell, X } from 'lucide-react';
 import { ClockHeader } from './components/ClockHeader';
 import { MainMenu } from './components/MainMenu';
 import { CalmLightMode } from './components/CalmLightMode';
@@ -24,6 +24,20 @@ import {
   requestLockScreenSleepPermission,
   syncLockScreenOngoingSleep,
 } from './services/lockScreenSleep';
+import { BACKUP_RESTORED_EVENT } from './utils/backupData';
+import {
+  SESSIONS_UPDATED_EVENT,
+  ScheduledWakeReminderInfo,
+  WAKE_REMINDER_ENABLED_KEY,
+  WAKE_REMINDER_LEAD_MINS_KEY,
+  WAKE_REMINDER_TRIGGERED_EVENT,
+  WakeReminderBannerPayload,
+  WakeReminderLeadMins,
+  readWakeReminderEnabled,
+  readWakeReminderLeadMins,
+  requestWakeReminderPermission,
+  syncWakeWindowReminder,
+} from './services/wakeWindowReminder';
 import {
   AppMode,
   WhiteNoiseLevel,
@@ -140,6 +154,42 @@ export default function App() {
     }
     if (enabled) {
       void requestLockScreenSleepPermission();
+    }
+  };
+
+  // Silent offline wake-window reminder notification settings
+  const [wakeReminderEnabled, setWakeReminderEnabled] = useState<boolean>(() =>
+    readWakeReminderEnabled()
+  );
+  const [wakeReminderLeadMins, setWakeReminderLeadMins] = useState<WakeReminderLeadMins>(() =>
+    readWakeReminderLeadMins()
+  );
+  const [scheduledWakeReminder, setScheduledWakeReminder] =
+    useState<ScheduledWakeReminderInfo | null>(null);
+  const [wakeReminderBanner, setWakeReminderBanner] =
+    useState<WakeReminderBannerPayload | null>(null);
+  const [sessionsSyncTick, setSessionsSyncTick] = useState<number>(0);
+
+  const handleToggleWakeReminder = (enabled: boolean) => {
+    setWakeReminderEnabled(enabled);
+    try {
+      localStorage.setItem(WAKE_REMINDER_ENABLED_KEY, enabled ? 'true' : 'false');
+    } catch {
+      // ignore
+    }
+    if (enabled) {
+      void requestWakeReminderPermission().then(() => {
+        setSessionsSyncTick((n) => n + 1);
+      });
+    }
+  };
+
+  const handleChangeWakeReminderLeadMins = (mins: WakeReminderLeadMins) => {
+    setWakeReminderLeadMins(mins);
+    try {
+      localStorage.setItem(WAKE_REMINDER_LEAD_MINS_KEY, String(mins));
+    } catch {
+      // ignore
     }
   };
 
@@ -364,6 +414,79 @@ export default function App() {
       babyName,
     });
   }, [lockScreenSleepEnabled, activeSleepStart, language, babyName]);
+
+  // Listen for sleep-session updates, backup restores & visibility resume to keep wake-window reminders synced
+  useEffect(() => {
+    const bump = () => setSessionsSyncTick((n) => n + 1);
+    const onBanner = (e: Event) => {
+      const detail = (e as CustomEvent<WakeReminderBannerPayload>).detail;
+      if (detail?.title && detail?.body) {
+        setWakeReminderBanner(detail);
+      }
+      bump();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        bump();
+      }
+    };
+    window.addEventListener(SESSIONS_UPDATED_EVENT, bump);
+    window.addEventListener(BACKUP_RESTORED_EVENT, bump);
+    window.addEventListener(WAKE_REMINDER_TRIGGERED_EVENT, onBanner);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener(SESSIONS_UPDATED_EVENT, bump);
+      window.removeEventListener(BACKUP_RESTORED_EVENT, bump);
+      window.removeEventListener(WAKE_REMINDER_TRIGGERED_EVENT, onBanner);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
+
+  // Auto-dismiss in-app silent reminder banner after 9 seconds
+  useEffect(() => {
+    if (!wakeReminderBanner) return;
+    const timer = window.setTimeout(() => setWakeReminderBanner(null), 9000);
+    return () => window.clearTimeout(timer);
+  }, [wakeReminderBanner]);
+
+  // Sync silent local wake-window reminder whenever sleep state, sessions, age, or settings change
+  useEffect(() => {
+    let cancelled = false;
+    void syncWakeWindowReminder({
+      enabled: wakeReminderEnabled,
+      leadMins: wakeReminderLeadMins,
+      activeSleepStart,
+      babyBirthDate,
+      babyName,
+      language,
+    }).then((info) => {
+      if (!cancelled) {
+        setScheduledWakeReminder(info);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    wakeReminderEnabled,
+    wakeReminderLeadMins,
+    activeSleepStart,
+    babyBirthDate,
+    babyName,
+    language,
+    sessionsSyncTick,
+  ]);
+
+  // Refresh scheduled reminder badge automatically once its trigger time passes
+  useEffect(() => {
+    if (!scheduledWakeReminder) return;
+    const msUntilPassed = scheduledWakeReminder.triggerAtMs - Date.now() + 2000;
+    const safeDelay = Math.max(2000, Math.min(msUntilPassed, 60 * 60 * 1000));
+    const timer = window.setTimeout(() => {
+      setSessionsSyncTick((n) => n + 1);
+    }, safeDelay);
+    return () => window.clearTimeout(timer);
+  }, [scheduledWakeReminder]);
 
   useEffect(() => {
     if (!activeSleepStart) {
@@ -986,6 +1109,27 @@ export default function App() {
         />
       )}
 
+      {/* Silent Wake-Window Reminder In-App Toast Banner */}
+      {wakeReminderBanner && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[60] w-[calc(100%-2rem)] max-w-sm rounded-2xl bg-slate-900/95 border border-emerald-400/40 p-3.5 shadow-2xl backdrop-blur-md flex items-start gap-2.5 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/35 text-emerald-300 flex items-center justify-center shrink-0 mt-0.5">
+            <Bell className="w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold text-white leading-snug">{wakeReminderBanner.title}</p>
+            <p className="text-[11px] text-white/70 mt-0.5 leading-relaxed">{wakeReminderBanner.body}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setWakeReminderBanner(null)}
+            className="p-1 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Settings Modal (opened via Settings Gear "koliesko") */}
       <SettingsModal
         isOpen={isSettingsOpen}
@@ -998,10 +1142,22 @@ export default function App() {
         onChangeBabyBirthDate={handleChangeBabyBirthDate}
         lockScreenSleepEnabled={lockScreenSleepEnabled}
         onToggleLockScreenSleep={handleToggleLockScreenSleep}
+        wakeReminderEnabled={wakeReminderEnabled}
+        onToggleWakeReminder={handleToggleWakeReminder}
+        wakeReminderLeadMins={wakeReminderLeadMins}
+        onChangeWakeReminderLeadMins={handleChangeWakeReminderLeadMins}
         nightMode={nightMode}
         onUpdateNightMode={handleUpdateNightMode}
         colorMode={colorMode}
         onChangeColorMode={handleChangeColorMode}
+        onBackupRestored={(result) => {
+          if (result.restoredProfile.babyName !== undefined) {
+            setBabyName(result.restoredProfile.babyName);
+          }
+          if (result.restoredProfile.babyBirthDate !== undefined) {
+            setBabyBirthDate(result.restoredProfile.babyBirthDate);
+          }
+        }}
       />
 
       {/* Permanent Header with app title, back button, lock, and settings gear */}
@@ -1140,6 +1296,9 @@ export default function App() {
               babyBirthDate={babyBirthDate}
               onChangeBabyBirthDate={handleChangeBabyBirthDate}
               lockScreenSleepEnabled={lockScreenSleepEnabled}
+              wakeReminderEnabled={wakeReminderEnabled}
+              onToggleWakeReminder={handleToggleWakeReminder}
+              scheduledWakeReminder={scheduledWakeReminder}
               activeSleepStart={activeSleepStart}
               sleepElapsedSeconds={sleepElapsedSeconds}
               onUpdateActiveSleepStart={handleUpdateActiveSleepStart}
@@ -1185,7 +1344,7 @@ export default function App() {
           title={translations[language].changelogModal.title}
         >
           <span className="font-medium text-white/60 group-hover:text-amber-200">Toddler sleep assistant</span>
-          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-white/10 group-hover:bg-amber-400 group-hover:text-slate-950 text-amber-300 transition-all">v1.1.0</span>
+          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md bg-white/10 group-hover:bg-amber-400 group-hover:text-slate-950 text-amber-300 transition-all">v1.1.1</span>
         </button>
 
         <button

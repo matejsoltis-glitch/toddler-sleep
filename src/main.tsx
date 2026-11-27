@@ -3,36 +3,6 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// One-time reset to fresh-install state as requested
-try {
-  const RESET_KEY = 'toddler_fresh_install_reset_v5';
-  if (!localStorage.getItem(RESET_KEY)) {
-    const keysToClear = [
-      'toddler_lang_configured',
-      'toddler_lang',
-      'toddler_baby_name',
-      'toddler_baby_birth_date',
-      'toddler_lockscreen_sleep_enabled',
-      'toddler_active_sleep_start',
-      'toddler_sleep_sessions',
-      'toddler_sleep_schedule_bounds',
-      'toddler_night_mode',
-      'toddler_color_mode',
-      'toddler_components_opacity',
-      'toddler_day_brightness',
-      'toddler_night_brightness',
-      'toddler_day_opacity',
-      'toddler_night_opacity',
-      'toddler_active_palette_id',
-      'toddler_custom_light_palette',
-    ];
-    keysToClear.forEach((k) => localStorage.removeItem(k));
-    localStorage.setItem(RESET_KEY, '1');
-  }
-} catch {
-  // ignore
-}
-
 
 interface Props {
   children: ReactNode;

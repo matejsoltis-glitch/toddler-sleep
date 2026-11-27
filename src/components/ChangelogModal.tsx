@@ -18,8 +18,83 @@ interface ReleaseEntry {
 
 const RELEASES: ReleaseEntry[] = [
   {
-    version: 'v1.1.0',
+    version: 'v1.1.1',
     isLatest: true,
+    highlights: {
+      sk: [
+        'Záloha a prenos dát (export / import JSON) v Nastaveniach + zachovanie histórie po aktualizácii a čistý štart pre nových používateľov.',
+        'Potvrdenie pred zmazaním spánku a úprava poradia v 4. režime (ručné pridanie spánku hneď pod aktuálnym stavom).',
+        'Kompaktnejšie zrolovateľné Nastavenia a tichá offline pripomienka pred ideálnym bdelým oknom.',
+        'Nový zrolovateľný 7-dňový čiarový graf spánku (Deň a noc / Spolu) a zdieľateľný súhrn pre pediatra (7/14 dní + CSV).',
+        'Oprava živého časovača spánku na zamknutej obrazovke na starších Androidoch (napr. Redmi Note 11 / MIUI) a presnejších výpočtov.',
+      ],
+      cs: [
+        'Záloha a přenos dat (export / import JSON) v Nastavení + zachování historie po aktualizaci a čistý start pro nové uživatele.',
+        'Potvrzení před smazáním spánku a úprava pořadí ve 4. režimu (ruční přidání spánku hned pod aktuálním stavem).',
+        'Kompaktnější sbalitelné Nastavení a tichá offline připomínka před ideálním bdělým oknem.',
+        'Nový sbalitelný 7denní čárový graf spánku (Den a noc / Celkem) a sdílený souhrn pro pediatra (7/14 dní + CSV).',
+        'Oprava živého časovače spánku na zamčené obrazovce u starších Androidů (např. Redmi Note 11 / MIUI) a přesnějších výpočtů.',
+      ],
+      en: [
+        'Backup & device transfer (JSON export / import) in Settings, preserved history across updates, and clean empty start for new users.',
+        'Delete confirmation for saved sleep records and improved Mode 4 layout (manual entry directly below current status).',
+        'Compact collapsible Settings sections and silent offline reminder before the ideal wake window.',
+        'New collapsible 7-day line chart (Day & Night / Total) and shareable 7/14-day pediatrician summary with CSV export.',
+        'Fixed live lock-screen sleep chronometer on older Android & MIUI devices (e.g. Redmi Note 11) and refined sleep math.',
+      ],
+      pl: [
+        'Kopia zapasowa i przenoszenie danych (eksport / import JSON) w Ustawieniach oraz czysty start dla nowych użytkowników.',
+        'Potwierdzenie przed usunięciem snu i wygodniejsza kolejność sekcji w trybie 4.',
+        'Kompaktowe zwijane Ustawienia i ciche przypomnienie offline przed idealnym oknem czuwania.',
+        'Nowy zwijany 7-dniowy wykres liniowy snu (Dzień i noc / Łącznie) oraz raport dla pediatry (7/14 dni + CSV).',
+        'Poprawka stopera snu na ekranie blokady starszych Androidów (np. Redmi Note 11 / MIUI) i dokładności obliczeń.',
+      ],
+      hu: [
+        'Biztonsági mentés és átvitel (JSON export / import) a Beállításokban, tiszta indulás új felhasználóknak.',
+        'Megerősítés alvás törlése előtt és áttekinthetőbb sorrend a 4. módban.',
+        'Kompakt, összecsukható Beállítások és csendes offline emlékeztető az ideális ébrenléti ablak előtt.',
+        'Új, lenyitható 7 napos vonaldiagram (Nappal és éjjel / Összesen) és megosztható összefoglaló gyermekorvosnak (7/14 nap + CSV).',
+        'Zárolt képernyős élő alvásidő-mérő javítása régebbi Androidokon (pl. Redmi Note 11 / MIUI).',
+      ],
+      uk: [
+        'Резервне копіювання та перенесення даних (експорт / імпорт JSON) у Налаштуваннях і чистий старт для нових користувачів.',
+        'Підтвердження перед видаленням запису сну та зручніший порядок блоків у 4-му режимі.',
+        'Компактні згортані Налаштування та тихе офлайн-нагадування перед ідеальним вікном сну.',
+        'Новий 7-денний лінійний графік сну (День і ніч / Разом) та підсумок для педіатра (7/14 днів + CSV).',
+        'Виправлення живого таймера сну на екрані блокування старіших Android (напр. Redmi Note 11 / MIUI).',
+      ],
+      it: [
+        'Backup e trasferimento dati (esporta / importa JSON) nelle Impostazioni e avvio pulito per i nuovi utenti.',
+        'Conferma prima di eliminare un sonno e ordine migliorato nella modalità 4.',
+        'Impostazioni compatte a fisarmonica e promemoria offline silenzioso prima della finestra di sonno ideale.',
+        'Nuovo grafico a linee a 7 giorni (Giorno e notte / Totale) e riepilogo condivisibile per pediatra (7/14 giorni + CSV).',
+        'Risolto il cronometro live del sonno su schermata di blocco per Android meno recenti (es. Redmi Note 11 / MIUI).',
+      ],
+      es: [
+        'Copia de seguridad y migración (exportar / importar JSON) en Ajustes e inicio limpio para nuevos usuarios.',
+        'Confirmación antes de borrar un sueño y orden mejorado en el modo 4.',
+        'Ajustes compactos plegables y recordatorio silencioso sin conexión antes de la ventana ideal de sueño.',
+        'Nuevo gráfico de líneas de 7 días (Día y noche / Total) y resumen compartible para pediatra (7/14 días + CSV).',
+        'Corrección del cronómetro en vivo en pantalla de bloqueo para Android antiguos (p. ej. Redmi Note 11 / MIUI).',
+      ],
+      ro: [
+        'Backup și transfer de date (export / import JSON) în Setări și start curat pentru utilizatorii noi.',
+        'Confirmare înainte de ștergerea unui somn și ordonare mai practică în modul 4.',
+        'Setări compacte pliabile și memento silențios offline înainte de fereastra optimă de somn.',
+        'Grafic liniar nou pe 7 zile (Zi și noapte / Total) și rezumat partajabil pentru pediatru (7/14 zile + CSV).',
+        'Corectarea cronometrului live pe ecranul de blocare pentru Android mai vechi (ex. Redmi Note 11 / MIUI).',
+      ],
+      ar: [
+        'نسخ احتياطي ونقل البيانات (تصدير/استيراد JSON) في الإعدادات وبداية نظيفة للمستخدمين الجدد.',
+        'تأكيد قبل حذف سجل النوم وترتيب أسهل لأقسام الوضع الرابع.',
+        'إعدادات مدمجة قابلة للطي وتذكير صامت دون إنترنت قبل نافذة النوم المثالية.',
+        'مخطط خطي جديد لآخر 7 أيام (نهار وليل / الإجمالي) وملخص قابل للمشاركة لطبيب الأطفال (7/14 يوماً + CSV).',
+        'إصلاح عداد النوم المباشر على شاشة القفل لهواتف أندرويد الأقدم (مثل Redmi Note 11 / MIUI).',
+      ],
+    },
+  },
+  {
+    version: 'v1.1.0',
     highlights: {
       sk: [
         'Aplikácia úspešne prešla testovaním a je oficiálne verejne dostupná!',
@@ -449,7 +524,7 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
                 {t.changelogModal?.title || 'História verzií a novinky'}
               </h2>
               <span className="text-[11px] text-amber-300/80 font-mono">
-                {t.changelogModal.currentVersionLabel} v1.1.0
+                {t.changelogModal.currentVersionLabel} v1.1.1
               </span>
             </div>
           </div>

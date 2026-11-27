@@ -18,6 +18,8 @@ import {
   SlidersHorizontal,
   Cake,
   BellRing,
+  Bell,
+  BellOff,
   Smartphone,
   History,
 } from 'lucide-react';
@@ -31,6 +33,14 @@ import {
   getWakeWindowCopy,
 } from '../utils/wakeWindow';
 import { getLockScreenCopy } from '../services/lockScreenSleep';
+import {
+  SESSIONS_UPDATED_EVENT,
+  ScheduledWakeReminderInfo,
+  getWakeReminderCopy,
+} from '../services/wakeWindowReminder';
+import { BACKUP_RESTORED_EVENT } from '../utils/backupData';
+import { WeeklySleepMiniChart } from './WeeklySleepMiniChart';
+import { PediatricSummarySection } from './PediatricSummarySection';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
@@ -41,6 +51,9 @@ interface ScheduleAssistantModeProps {
   babyBirthDate?: string;
   onChangeBabyBirthDate?: (dateStr: string) => void;
   lockScreenSleepEnabled?: boolean;
+  wakeReminderEnabled?: boolean;
+  onToggleWakeReminder?: (enabled: boolean) => void;
+  scheduledWakeReminder?: ScheduledWakeReminderInfo | null;
   activeSleepStart?: string | null;
   sleepElapsedSeconds?: number;
   onUpdateActiveSleepStart?: (nextIso: string | null) => void;
@@ -101,6 +114,54 @@ const getSessionCalendarDate = (session: SleepSession): string => {
   return toLocalDateStr(refDate);
 };
 
+const getSessionDurationMinutes = (session: SleepSession): number => {
+  if (Number.isFinite(session.durationMinutes) && session.durationMinutes > 0) {
+    return Math.round(session.durationMinutes);
+  }
+  const startMs = new Date(session.startTime).getTime();
+  const endMs = new Date(session.endTime).getTime();
+  if (!Number.isNaN(startMs) && !Number.isNaN(endMs) && endMs > startMs) {
+    return Math.max(1, Math.round((endMs - startMs) / 60000));
+  }
+  return 0;
+};
+
+const buildSessionDateRange = (
+  dateStr: string,
+  startHHMM: string,
+  endHHMM: string,
+  shiftOvernightBackIfFuture = false
+): { startDateTime: Date; endDateTime: Date; durationMinutes: number } | null => {
+  const startDateTime = new Date(`${dateStr}T${startHHMM}:00`);
+  const endDateTime = new Date(`${dateStr}T${endHHMM}:00`);
+  if (Number.isNaN(startDateTime.getTime()) || Number.isNaN(endDateTime.getTime())) {
+    return null;
+  }
+
+  // Handle overnight spans using calendar setDate (DST-safe, preserves exact wall-clock time)
+  const isOvernight = endDateTime.getTime() <= startDateTime.getTime();
+  if (isOvernight) {
+    endDateTime.setDate(endDateTime.getDate() + 1);
+
+    // If parent logs last night's sleep in the morning while leaving the date on today
+    // (e.g. today 20:00 -> tomorrow 06:30), shift both back by 1 day so it saves as yesterday 20:00 -> today 06:30
+    if (shiftOvernightBackIfFuture && endDateTime.getTime() > Date.now()) {
+      const shiftedEnd = new Date(endDateTime);
+      shiftedEnd.setDate(shiftedEnd.getDate() - 1);
+      if (shiftedEnd.getTime() <= Date.now()) {
+        startDateTime.setDate(startDateTime.getDate() - 1);
+        endDateTime.setDate(endDateTime.getDate() - 1);
+      }
+    }
+  }
+
+  const durationMinutes = Math.max(
+    1,
+    Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000)
+  );
+  return { startDateTime, endDateTime, durationMinutes };
+};
+
 interface ScheduleTexts {
   currentStatus: string;
   babySleeping: string;
@@ -139,6 +200,9 @@ interface ScheduleTexts {
   latestFirst: string;
   noHistory: string;
   deleteTitle: string;
+  deleteConfirmTitle: string;
+  deleteConfirmDesc: string;
+  deleteConfirmBtn: string;
   saveWakeUpModal: string;
   howWasSleep: string;
   discard: string;
@@ -250,6 +314,9 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     latestFirst: 'Najnovšie hore',
     noHistory: 'Zatiaľ nemáte zaznamenaný žiadny spánok. Ťuknite vyššie na "Dieťatko práve zaspalo".',
     deleteTitle: 'Vymazať',
+    deleteConfirmTitle: 'Vymazať tento spánok?',
+    deleteConfirmDesc: 'Záznam bude natrvalo odstránený z histórie spánkov aj z denných štatistík.',
+    deleteConfirmBtn: 'Áno, vymazať',
     saveWakeUpModal: 'Uložiť prebudenie',
     howWasSleep: 'Ako dieťatko spalo?',
     discard: 'Zahodiť',
@@ -359,6 +426,9 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     latestFirst: 'Nejnovější nahoře',
     noHistory: 'Zatím nemáte zaznamenaný žádný spánek. Klepněte výše na "Děťátko právě usnulo".',
     deleteTitle: 'Smazat',
+    deleteConfirmTitle: 'Smazat tento spánek?',
+    deleteConfirmDesc: 'Záznam bude trvale odstraněn z historie spánků i z denních statistik.',
+    deleteConfirmBtn: 'Ano, smazat',
     saveWakeUpModal: 'Uložit probuzení',
     howWasSleep: 'Jak děťátko spalo?',
     discard: 'Zahodit',
@@ -468,6 +538,9 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     latestFirst: 'Latest first',
     noHistory: 'No sleep sessions recorded yet. Tap "Baby just fell asleep" above.',
     deleteTitle: 'Delete',
+    deleteConfirmTitle: 'Delete this sleep record?',
+    deleteConfirmDesc: 'This session will be permanently removed from your sleep history and daily totals.',
+    deleteConfirmBtn: 'Yes, delete',
     saveWakeUpModal: 'Save wake up',
     howWasSleep: 'How was the sleep?',
     discard: 'Discard',
@@ -577,6 +650,9 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     latestFirst: 'Najnowsze na górze',
     noHistory: 'Nie zarejestrowano jeszcze snu. Dotknij wyżej "Dzidziuś właśnie zasnął".',
     deleteTitle: 'Usuń',
+    deleteConfirmTitle: 'Usunąć ten wpis snu?',
+    deleteConfirmDesc: 'Wpis zostanie trwale usunięty z historii snu oraz z dziennych statystyk.',
+    deleteConfirmBtn: 'Tak, usuń',
     saveWakeUpModal: 'Zapisz wybudzenie',
     howWasSleep: 'Jak spał maluch?',
     discard: 'Odrzuć',
@@ -686,6 +762,9 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     latestFirst: 'Legfrissebb felül',
     noHistory: 'Még nincs rögzített alvás. Érintse meg fent a "A baba épp most aludt el" gombot.',
     deleteTitle: 'Törlés',
+    deleteConfirmTitle: 'Törli ezt az alvásbejegyzést?',
+    deleteConfirmDesc: 'A bejegyzés véglegesen törlődik az alvástörténetből és a napi statisztikákból.',
+    deleteConfirmBtn: 'Igen, törlés',
     saveWakeUpModal: 'Ébredés mentése',
     howWasSleep: 'Hogy aludt a baba?',
     discard: 'Elvetés',
@@ -795,6 +874,9 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     latestFirst: 'Спочатку найновіші',
     noHistory: 'Ще немає записів сну. Натисніть вище "Дитина щойно заснула".',
     deleteTitle: 'Видалити',
+    deleteConfirmTitle: 'Видалити цей запис сну?',
+    deleteConfirmDesc: 'Запис буде остаточно видалено з історії сну та денної статистики.',
+    deleteConfirmBtn: 'Так, видалити',
     saveWakeUpModal: 'Зберегти пробудження',
     howWasSleep: 'Як спала дитина?',
     discard: 'Скасувати',
@@ -904,6 +986,9 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     latestFirst: 'I più recenti in alto',
     noHistory: 'Nessun sonno registrato finora. Tocca sopra "Il bimbo si è appena addormentato".',
     deleteTitle: 'Elimina',
+    deleteConfirmTitle: 'Eliminare questa sessione di sonno?',
+    deleteConfirmDesc: 'La sessione verrà rimossa definitivamente dalla cronologia e dalle statistiche giornaliere.',
+    deleteConfirmBtn: 'Sì, elimina',
     saveWakeUpModal: 'Salva risveglio',
     howWasSleep: 'Come ha dormito il bimbo?',
     discard: 'Annulla',
@@ -1013,6 +1098,9 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     latestFirst: 'Más recientes arriba',
     noHistory: 'Aún no hay ningún sueño registrado. Toca arriba en "El bebé acaba de dormirse".',
     deleteTitle: 'Eliminar',
+    deleteConfirmTitle: '¿Eliminar este registro de sueño?',
+    deleteConfirmDesc: 'El registro se eliminará de forma permanente del historial y de las estadísticas diarias.',
+    deleteConfirmBtn: 'Sí, eliminar',
     saveWakeUpModal: 'Guardar despertar',
     howWasSleep: '¿Cómo durmió el bebé?',
     discard: 'Descartar',
@@ -1122,6 +1210,9 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     latestFirst: 'Cele mai noi sus',
     noHistory: 'Nu există încă niciun somn înregistrat. Apasă mai sus pe „Bebelușul tocmai a adormit”.',
     deleteTitle: 'Șterge',
+    deleteConfirmTitle: 'Ștergi această sesiune de somn?',
+    deleteConfirmDesc: 'Înregistrarea va fi ștearsă definitiv din istoric și din statisticile zilnice.',
+    deleteConfirmBtn: 'Da, șterge',
     saveWakeUpModal: 'Salvează trezirea',
     howWasSleep: 'Cum a dormit bebelușul?',
     discard: 'Renunță',
@@ -1231,6 +1322,9 @@ const scheduleTexts: Record<Language, ScheduleTexts> = {
     latestFirst: 'الأحدث أولاً',
     noHistory: 'لا توجد جلسات نوم مسجلة بعد. اضغط أعلاه على «نام الطفل الآن».',
     deleteTitle: 'حذف',
+    deleteConfirmTitle: 'هل تريد حذف سجل النوم هذا؟',
+    deleteConfirmDesc: 'سيتم حذف الجلسة نهائياً من سجل النوم ومن إحصاءات اليوم.',
+    deleteConfirmBtn: 'نعم، احذف',
     saveWakeUpModal: 'حفظ الاستيقاظ',
     howWasSleep: 'كيف كان نوم الطفل؟',
     discard: 'تجاهل',
@@ -1323,6 +1417,9 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
   babyBirthDate = '',
   onChangeBabyBirthDate,
   lockScreenSleepEnabled = true,
+  wakeReminderEnabled = false,
+  onToggleWakeReminder,
+  scheduledWakeReminder = null,
   activeSleepStart: controlledActiveSleepStart,
   sleepElapsedSeconds: controlledElapsedSeconds,
   onUpdateActiveSleepStart,
@@ -1332,6 +1429,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
   const personalizedCopy = getPersonalizedCopy(babyName, language);
   const wakeCopy = getWakeWindowCopy(language, babyName);
   const lockCopy = getLockScreenCopy(language);
+  const reminderCopy = getWakeReminderCopy(language, babyName);
   const texts: ScheduleTexts = personalized
     ? {
         ...baseTexts,
@@ -1343,8 +1441,16 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
   const [draftBirthDate, setDraftBirthDate] = useState<string>(babyBirthDate);
   const [wakeClockTick, setWakeClockTick] = useState<number>(() => Date.now());
 
-  const todayDateStr = toLocalDateStr(new Date());
-  const yesterdayDate = new Date(Date.now() - 24 * 3600 * 1000);
+  const nowForDates = new Date(wakeClockTick);
+  const todayDateStr = toLocalDateStr(nowForDates);
+  const yesterdayDate = new Date(
+    nowForDates.getFullYear(),
+    nowForDates.getMonth(),
+    nowForDates.getDate() - 1,
+    12,
+    0,
+    0
+  );
   const yesterdayDateStr = toLocalDateStr(yesterdayDate);
 
   // Customizable Day / Night sleep schedule window (persisted in localStorage)
@@ -1465,42 +1571,25 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
     setIsCalendarModalOpen(false);
   };
 
-  // Load sessions from localStorage or seed initial sample
+  // Load sessions from localStorage (fresh new users start with an empty sleep history)
   const [sessions, setSessions] = useState<SleepSession[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_SESSIONS);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .filter(
+              (item): item is SleepSession =>
+                Boolean(item && typeof item.id === 'string' && item.startTime && item.endTime)
+            )
+            .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+        }
       }
     } catch {
       // ignore
     }
-    // Initial sample sessions so parents immediately see the structure
-    const now = new Date();
-    const todayStr = toLocalDateStr(now);
-    const yesterday = new Date(now.getTime() - 24 * 3600 * 1000);
-    const yesterdayStr = toLocalDateStr(yesterday);
-
-    return [
-      {
-        id: 'sample-1',
-        startTime: `${todayStr}T12:30:00`,
-        endTime: `${todayStr}T14:15:00`,
-        durationMinutes: 105,
-        type: 'day-nap',
-        quality: 'peaceful',
-        notes: baseTexts.sampleNote1,
-      },
-      {
-        id: 'sample-2',
-        startTime: `${yesterdayStr}T20:00:00`,
-        endTime: `${todayStr}T06:30:00`,
-        durationMinutes: 630,
-        type: 'night-sleep',
-        quality: 'normal',
-        notes: baseTexts.sampleNote2,
-      },
-    ];
+    return [];
   });
 
   // Active ongoing sleep start time (controlled by App.tsx if provided, with fallback local state)
@@ -1548,6 +1637,9 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
   const [editQuality, setEditQuality] = useState<SleepQuality>('peaceful');
   const [editNotes, setEditNotes] = useState('');
 
+  // Pending delete confirmation modal state (prevents accidental 1-tap deletion)
+  const [sessionPendingDelete, setSessionPendingDelete] = useState<SleepSession | null>(null);
+
   // Quick finish modal state when waking up from live timer
   const [wakeModalOpen, setWakeModalOpen] = useState(false);
   const [pendingEndSession, setPendingEndSession] = useState<{
@@ -1571,15 +1663,65 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
 
   // Toast / feedback message
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
 
-  // Save sessions to localStorage whenever changed
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Save sessions to localStorage whenever changed & notify reminder scheduler
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(sessions));
+      window.dispatchEvent(new CustomEvent(SESSIONS_UPDATED_EVENT));
     } catch {
       // ignore
     }
   }, [sessions]);
+
+  // Refresh sessions & day/night schedule live whenever user restores a backup in Settings
+  useEffect(() => {
+    const handleBackupRestored = () => {
+      try {
+        const savedSessions = localStorage.getItem(STORAGE_KEY_SESSIONS);
+        if (savedSessions) {
+          const parsed = JSON.parse(savedSessions);
+          if (Array.isArray(parsed)) {
+            setSessions(
+              parsed
+                .filter(
+                  (item): item is SleepSession =>
+                    Boolean(item && typeof item.id === 'string' && item.startTime && item.endTime)
+                )
+                .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+            );
+          }
+        }
+        const savedBounds = localStorage.getItem(STORAGE_KEY_BOUNDS);
+        if (savedBounds) {
+          const parsedBounds = JSON.parse(savedBounds);
+          if (
+            typeof parsedBounds?.dayStart === 'string' &&
+            typeof parsedBounds?.nightStart === 'string'
+          ) {
+            setScheduleBounds({
+              dayStart: parsedBounds.dayStart,
+              nightStart: parsedBounds.nightStart,
+            });
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    window.addEventListener(BACKUP_RESTORED_EVENT, handleBackupRestored);
+    return () => window.removeEventListener(BACKUP_RESTORED_EVENT, handleBackupRestored);
+  }, []);
 
   // Fallback live timer tick if uncontrolled
   useEffect(() => {
@@ -1604,7 +1746,13 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = window.setTimeout(() => {
+      toastTimerRef.current = null;
+      setToastMessage(null);
+    }, 3500);
   };
 
   // Helper for quality badge labels
@@ -1733,23 +1881,15 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
   // 3. Manual Entry submission
   const handleSaveManualSession = (e: React.FormEvent) => {
     e.preventDefault();
+    const range = buildSessionDateRange(manualDate, manualStartTime, manualEndTime, true);
+    if (!range) return;
     triggerHaptic('medium');
-
-    const startDateTime = new Date(`${manualDate}T${manualStartTime}:00`);
-    let endDateTime = new Date(`${manualDate}T${manualEndTime}:00`);
-
-    // Handle overnight spans (e.g. 21:00 to 07:00 next day)
-    if (endDateTime.getTime() <= startDateTime.getTime()) {
-      endDateTime = new Date(endDateTime.getTime() + 24 * 3600 * 1000);
-    }
-
-    const durationMin = Math.max(1, Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000));
 
     const newSession: SleepSession = {
       id: 'sleep-' + Date.now(),
-      startTime: startDateTime.toISOString(),
-      endTime: endDateTime.toISOString(),
-      durationMinutes: durationMin,
+      startTime: range.startDateTime.toISOString(),
+      endTime: range.endDateTime.toISOString(),
+      durationMinutes: range.durationMinutes,
       type: manualType,
       quality: manualQuality,
       notes: manualNotes.trim() || undefined,
@@ -1783,19 +1923,9 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
   const handleSaveEditedSession = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSession) return;
+    const range = buildSessionDateRange(editDate, editStartTime, editEndTime, false);
+    if (!range) return;
     triggerHaptic('medium');
-
-    const startDateTime = new Date(`${editDate}T${editStartTime}:00`);
-    let endDateTime = new Date(`${editDate}T${editEndTime}:00`);
-
-    if (endDateTime.getTime() <= startDateTime.getTime()) {
-      endDateTime = new Date(endDateTime.getTime() + 24 * 3600 * 1000);
-    }
-
-    const durationMinutes = Math.max(
-      1,
-      Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000)
-    );
 
     setSessions((prev) =>
       prev
@@ -1803,9 +1933,9 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
           item.id === editingSession.id
             ? {
                 ...item,
-                startTime: startDateTime.toISOString(),
-                endTime: endDateTime.toISOString(),
-                durationMinutes,
+                startTime: range.startDateTime.toISOString(),
+                endTime: range.endDateTime.toISOString(),
+                durationMinutes: range.durationMinutes,
                 type: editType,
                 quality: editQuality,
                 notes: editNotes.trim() || undefined,
@@ -1822,19 +1952,23 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
   // Compute live preview duration for Edit modal
   const getEditDurationPreview = () => {
     if (!editDate || !editStartTime || !editEndTime) return 0;
-    const startDateTime = new Date(`${editDate}T${editStartTime}:00`);
-    let endDateTime = new Date(`${editDate}T${editEndTime}:00`);
-    if (Number.isNaN(startDateTime.getTime()) || Number.isNaN(endDateTime.getTime())) return 0;
-    if (endDateTime.getTime() <= startDateTime.getTime()) {
-      endDateTime = new Date(endDateTime.getTime() + 24 * 3600 * 1000);
-    }
-    return Math.max(1, Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000));
+    const range = buildSessionDateRange(editDate, editStartTime, editEndTime, false);
+    return range ? range.durationMinutes : 0;
   };
 
-  // Delete a session
-  const handleDeleteSession = (id: string) => {
+  // Open confirmation dialog before deleting a session
+  const handleRequestDeleteSession = (session: SleepSession) => {
     triggerHaptic('light');
-    setSessions((prev) => prev.filter((s) => s.id !== id));
+    setSessionPendingDelete(session);
+  };
+
+  // Confirmed deletion
+  const handleConfirmDeleteSession = () => {
+    if (!sessionPendingDelete) return;
+    triggerHaptic('medium');
+    const targetId = sessionPendingDelete.id;
+    setSessions((prev) => prev.filter((s) => s.id !== targetId));
+    setSessionPendingDelete(null);
     showToast(texts.toastSessionRemoved);
   };
 
@@ -1866,8 +2000,14 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
     return () => clearInterval(interval);
   }, [activeSleepStart, sessions.length]);
 
-  // Calculate Wake Window: Time elapsed since the last finished sleep session ended
-  const lastSession = sessions.length > 0 ? sessions[0] : null;
+  // Calculate Wake Window: Time elapsed since the most recent completed sleep session ended
+  const lastSession =
+    sessions
+      .filter((s) => {
+        const endMs = new Date(s.endTime).getTime();
+        return !Number.isNaN(endMs) && endMs <= wakeClockTick;
+      })
+      .sort((a, b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime())[0] ?? null;
   const calculateWakeWindowMinutes = () => {
     if (!lastSession || activeSleepStart) return null;
     const endMs = new Date(lastSession.endTime).getTime();
@@ -1896,11 +2036,11 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
 
   // Calculate today's total sleep & breakdown (using local calendar date; overnight sleep counts on wake-up morning)
   const todaySessions = sessions.filter((s) => getSessionCalendarDate(s) === todayDateStr);
-  const todayTotalMins = todaySessions.reduce((acc, curr) => acc + curr.durationMinutes, 0);
+  const todayTotalMins = todaySessions.reduce((acc, curr) => acc + getSessionDurationMinutes(curr), 0);
   const todayNapSessions = todaySessions.filter((s) => s.type === 'day-nap');
   const todayNightSessions = todaySessions.filter((s) => s.type === 'night-sleep');
-  const todayNapMins = todayNapSessions.reduce((acc, curr) => acc + curr.durationMinutes, 0);
-  const todayNightMins = todayNightSessions.reduce((acc, curr) => acc + curr.durationMinutes, 0);
+  const todayNapMins = todayNapSessions.reduce((acc, curr) => acc + getSessionDurationMinutes(curr), 0);
+  const todayNightMins = todayNightSessions.reduce((acc, curr) => acc + getSessionDurationMinutes(curr), 0);
   const todayAvgMins = todaySessions.length > 0 ? Math.round(todayTotalMins / todaySessions.length) : 0;
 
   // Calendar Day Navigation helpers
@@ -1950,7 +2090,10 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
     : sessions;
 
   // Calculate day metrics for filtered date
-  const filteredDayTotalMins = filteredSessions.reduce((acc, curr) => acc + curr.durationMinutes, 0);
+  const filteredDayTotalMins = filteredSessions.reduce(
+    (acc, curr) => acc + getSessionDurationMinutes(curr),
+    0
+  );
 
   // History display limitation:
   // - Default: max 6 items
@@ -2263,11 +2406,42 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
                       )}
                 </p>
 
-                <div className="pt-1.5 border-t border-white/10 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[10px] text-white/50">
-                  <span className="font-medium text-white/65">
-                    {wakeCopy.dailyTargetLabel(wakeEval.age.dailySleepRangeHours, wakeEval.age.guidelineSource)}
-                  </span>
-                  <span>{wakeCopy.sleepCuesHint}</span>
+                <div className="pt-1.5 border-t border-white/10 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 text-[10px] text-white/50">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="font-medium text-white/65">
+                      {wakeCopy.dailyTargetLabel(wakeEval.age.dailySleepRangeHours, wakeEval.age.guidelineSource)}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span>{wakeCopy.sleepCuesHint}</span>
+                  </div>
+
+                  {onToggleWakeReminder && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        onToggleWakeReminder(!wakeReminderEnabled);
+                      }}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all active:scale-95 touch-manipulation shrink-0 ${
+                        wakeReminderEnabled
+                          ? 'bg-emerald-500/20 border border-emerald-400/35 text-emerald-200'
+                          : 'bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white/65'
+                      }`}
+                    >
+                      {wakeReminderEnabled ? (
+                        <Bell className="w-3 h-3 text-emerald-300 shrink-0" />
+                      ) : (
+                        <BellOff className="w-3 h-3 text-white/50 shrink-0" />
+                      )}
+                      <span className="whitespace-nowrap tabular-nums">
+                        {wakeReminderEnabled
+                          ? scheduledWakeReminder
+                            ? reminderCopy.scheduledAtBadge(scheduledWakeReminder.triggerTimeLabel)
+                            : reminderCopy.toggleOnChip
+                          : reminderCopy.toggleOffChip}
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -2300,94 +2474,21 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
         )}
       </div>
 
-      {/* Statistics Window (No title, sleek unified container holding today total, naps count, and subtle breakdown) */}
-      <div className="p-4 rounded-3xl bg-slate-900/60 border border-white/10 flex flex-col gap-3 shadow-md backdrop-blur-sm">
-        {/* Main Stats Row: Dnes naspaté & Dnešné spánky */}
-        <div className="grid grid-cols-2 gap-3 items-center">
-          {/* Stat 1: Dnes naspaté */}
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-300 flex items-center justify-center shrink-0 shadow-sm">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[10px] uppercase tracking-wider text-white/50 block font-semibold truncate">
-                {texts.todayTotal}
-              </span>
-              <span className="text-base sm:text-lg font-bold text-white tracking-tight truncate block">
-                {todayTotalMins > 0 ? formatDuration(todayTotalMins) : '0 min'}
-              </span>
-            </div>
-          </div>
-
-          {/* Stat 2: Dnešné spánky */}
-          <div className="flex items-center gap-3 min-w-0 pl-2 sm:pl-3 border-l border-white/10">
-            <div className="w-10 h-10 rounded-2xl bg-purple-500/15 border border-purple-400/25 text-purple-300 flex items-center justify-center shrink-0 shadow-sm">
-              <CalendarIcon className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[10px] uppercase tracking-wider text-white/50 block font-semibold truncate">
-                {texts.todayNaps}
-              </span>
-              <span className="text-base sm:text-lg font-bold text-white tracking-tight truncate block">
-                {todaySessions.length}{' '}
-                <span className="text-xs font-normal text-white/50">
-                  {texts.sessionsCount}
-                </span>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Subtle sub-metrics breakdown row (Day Sleep, Night Sleep, Average) + small Day/Night schedule button */}
-        <div className="pt-2.5 border-t border-white/5 flex items-end justify-between gap-2 text-[11px] text-white/60">
-          <div className="flex-1 grid grid-cols-3 gap-1.5 min-w-0">
-            <div className="flex flex-col min-w-0">
-              <span className="text-[9px] uppercase tracking-wider text-white/40 truncate">
-                {texts.dayNap}
-              </span>
-              <span className="font-semibold text-white/85">
-                {formatDuration(todayNapMins)}
-              </span>
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-[9px] uppercase tracking-wider text-white/40 truncate">
-                {texts.nightSleep}
-              </span>
-              <span className="font-semibold text-white/85">
-                {formatDuration(todayNightMins)}
-              </span>
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-[9px] uppercase tracking-wider text-white/40 truncate">
-                {texts.average}
-              </span>
-              <span className="font-semibold text-white/85">
-                {formatDuration(todayAvgMins)}
-              </span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleOpenBoundsModal}
-            title={texts.sleepBoundsModalTitle}
-            aria-label={texts.sleepBoundsModalTitle}
-            className="h-8 px-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.14] active:scale-95 border border-white/10 text-amber-200/85 hover:text-amber-200 flex items-center gap-1 text-[10px] font-medium transition-all touch-manipulation shrink-0"
-          >
-            <SlidersHorizontal className="w-3 h-3 text-amber-300 shrink-0" />
-            <span className="font-mono tracking-tight" dir="ltr">
-              {scheduleBounds.dayStart}–{scheduleBounds.nightStart}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Manual Entry Toggle */}
+      {/* Manual Entry Toggle (placed right below Current Status) */}
       <div className="rounded-2xl border border-white/10 bg-slate-900/50 overflow-hidden">
         <button
+          type="button"
           onClick={() => {
             triggerHaptic('light');
-            setShowManualForm(!showManualForm);
+            const nextOpen = !showManualForm;
+            if (nextOpen) {
+              const currentToday = toLocalDateStr(new Date());
+              setManualDate(currentToday);
+              setManualType(
+                classifySleepTypeByBounds(`${currentToday}T${manualStartTime}:00`, scheduleBounds)
+              );
+            }
+            setShowManualForm(nextOpen);
           }}
           className="w-full px-4 py-3 flex items-center justify-between text-left text-xs font-semibold text-white/80 hover:bg-white/5 active:bg-white/10 transition-colors"
         >
@@ -2425,7 +2526,18 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
                 <input
                   type="time"
                   value={manualStartTime}
-                  onChange={(e) => setManualStartTime(e.target.value)}
+                  onChange={(e) => {
+                    const nextStart = e.target.value;
+                    setManualStartTime(nextStart);
+                    if (nextStart) {
+                      setManualType(
+                        classifySleepTypeByBounds(
+                          `${manualDate || todayDateStr}T${nextStart}:00`,
+                          scheduleBounds
+                        )
+                      );
+                    }
+                  }}
                   className="w-full px-2 py-1.5 rounded-xl bg-slate-950 border border-white/15 text-xs text-white"
                   required
                 />
@@ -2518,6 +2630,95 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
           </form>
         )}
       </div>
+
+      {/* Statistics Window (No title, sleek unified container holding today total, naps count, and subtle breakdown) */}
+      <div className="p-4 rounded-3xl bg-slate-900/60 border border-white/10 flex flex-col gap-3 shadow-md backdrop-blur-sm">
+        {/* Main Stats Row: Dnes naspaté & Dnešné spánky */}
+        <div className="grid grid-cols-2 gap-3 items-center">
+          {/* Stat 1: Dnes naspaté */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-400/25 text-indigo-300 flex items-center justify-center shrink-0 shadow-sm">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase tracking-wider text-white/50 block font-semibold truncate">
+                {texts.todayTotal}
+              </span>
+              <span className="text-base sm:text-lg font-bold text-white tracking-tight truncate block">
+                {todayTotalMins > 0 ? formatDuration(todayTotalMins) : '0 min'}
+              </span>
+            </div>
+          </div>
+
+          {/* Stat 2: Dnešné spánky */}
+          <div className="flex items-center gap-3 min-w-0 pl-2 sm:pl-3 border-l border-white/10">
+            <div className="w-10 h-10 rounded-2xl bg-purple-500/15 border border-purple-400/25 text-purple-300 flex items-center justify-center shrink-0 shadow-sm">
+              <CalendarIcon className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase tracking-wider text-white/50 block font-semibold truncate">
+                {texts.todayNaps}
+              </span>
+              <span className="text-base sm:text-lg font-bold text-white tracking-tight truncate block">
+                {todaySessions.length}{' '}
+                <span className="text-xs font-normal text-white/50">
+                  {texts.sessionsCount}
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Subtle sub-metrics breakdown row (Day Sleep, Night Sleep, Average) + small Day/Night schedule button */}
+        <div className="pt-2.5 border-t border-white/5 flex items-end justify-between gap-2 text-[11px] text-white/60">
+          <div className="flex-1 grid grid-cols-3 gap-1.5 min-w-0">
+            <div className="flex flex-col min-w-0">
+              <span className="text-[9px] uppercase tracking-wider text-white/40 truncate">
+                {texts.dayNap}
+              </span>
+              <span className="font-semibold text-white/85">
+                {formatDuration(todayNapMins)}
+              </span>
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[9px] uppercase tracking-wider text-white/40 truncate">
+                {texts.nightSleep}
+              </span>
+              <span className="font-semibold text-white/85">
+                {formatDuration(todayNightMins)}
+              </span>
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-[9px] uppercase tracking-wider text-white/40 truncate">
+                {texts.average}
+              </span>
+              <span className="font-semibold text-white/85">
+                {formatDuration(todayAvgMins)}
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleOpenBoundsModal}
+            title={texts.sleepBoundsModalTitle}
+            aria-label={texts.sleepBoundsModalTitle}
+            className="h-8 px-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.14] active:scale-95 border border-white/10 text-amber-200/85 hover:text-amber-200 flex items-center gap-1 text-[10px] font-medium transition-all touch-manipulation shrink-0"
+          >
+            <SlidersHorizontal className="w-3 h-3 text-amber-300 shrink-0" />
+            <span className="font-mono tracking-tight" dir="ltr">
+              {scheduleBounds.dayStart}–{scheduleBounds.nightStart}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Collapsible 7-Day Sleep Trend Mini-Chart (collapsed by default) */}
+      <WeeklySleepMiniChart
+        sessions={sessions}
+        language={language}
+        babyBirthDate={babyBirthDate}
+      />
 
       {/* Collapsible Sleep History Section (collapsed by default, smooth unroll on click) */}
       <div className="rounded-2xl border border-white/10 bg-slate-900/50 overflow-hidden transition-colors">
@@ -2716,7 +2917,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
                             {startStr} – {endStr}
                           </span>
                           <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/10 font-bold text-white/80">
-                            {formatDuration(s.durationMinutes)}
+                            {formatDuration(getSessionDurationMinutes(s))}
                           </span>
                         </div>
 
@@ -2749,7 +2950,7 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
 
                       <button
                         type="button"
-                        onClick={() => handleDeleteSession(s.id)}
+                        onClick={() => handleRequestDeleteSession(s)}
                         className="p-2 rounded-xl text-white/30 hover:text-red-400 hover:bg-red-500/10 active:scale-95 transition-all shrink-0"
                         title={texts.deleteTitle}
                         aria-label={texts.deleteTitle}
@@ -2797,6 +2998,15 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Collapsible Shareable Summary for Pediatrician / Sleep Consultant (placed below Sleep History) */}
+      <PediatricSummarySection
+        sessions={sessions}
+        language={language}
+        babyName={babyName}
+        babyBirthDate={babyBirthDate}
+        onNotify={showToast}
+      />
 
       {/* Completion Modal when stopping Live Sleep Timer */}
       {wakeModalOpen && pendingEndSession && (
@@ -3418,6 +3628,113 @@ export const ScheduleAssistantMode: React.FC<ScheduleAssistantModeProps> = ({
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Confirm Delete Sleep Session Modal (prevents accidental 1-tap deletion) */}
+      {sessionPendingDelete && (
+        <div
+          onClick={() => setSessionPendingDelete(null)}
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-3xl bg-slate-900 border border-red-400/25 p-5 flex flex-col gap-4 shadow-2xl animate-in zoom-in-95 duration-200"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-red-500/15 border border-red-400/30 text-red-400 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-white leading-snug">
+                  {texts.deleteConfirmTitle}
+                </h3>
+                <p className="text-[11px] text-white/60 mt-0.5 leading-relaxed">
+                  {texts.deleteConfirmDesc}
+                </p>
+              </div>
+            </div>
+
+            {(() => {
+              const startD = new Date(sessionPendingDelete.startTime);
+              const endD = new Date(sessionPendingDelete.endTime);
+              const datePreview = startD.toLocaleDateString(currentLocale, {
+                day: 'numeric',
+                month: 'short',
+              });
+              const startPreview = startD.toLocaleTimeString(currentLocale, {
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+              const endPreview = endD.toLocaleTimeString(currentLocale, {
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+              return (
+                <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center gap-3">
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                      sessionPendingDelete.type === 'night-sleep'
+                        ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/30'
+                        : 'bg-amber-500/20 text-amber-300 border border-amber-400/30'
+                    }`}
+                  >
+                    {sessionPendingDelete.type === 'night-sleep' ? (
+                      <Moon className="w-4 h-4" />
+                    ) : (
+                      <Sun className="w-4 h-4" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-white">
+                        {startPreview} – {endPreview}
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/10 font-bold text-white/80">
+                        {formatDuration(getSessionDurationMinutes(sessionPendingDelete))}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-white/50 mt-0.5 truncate">
+                      <span>{datePreview}</span>
+                      <span>·</span>
+                      <span>
+                        {sessionPendingDelete.type === 'night-sleep'
+                          ? texts.nightSleep
+                          : texts.dayNap}
+                      </span>
+                      {sessionPendingDelete.notes && (
+                        <>
+                          <span>·</span>
+                          <span className="italic truncate">"{sessionPendingDelete.notes}"</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setSessionPendingDelete(null);
+                }}
+                className="flex-1 py-2.5 px-4 rounded-2xl bg-white/10 hover:bg-white/15 text-white/85 font-semibold text-xs active:scale-95 transition-all"
+              >
+                {texts.cancelBtn}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmDeleteSession}
+                className="flex-1 py-2.5 px-4 rounded-2xl bg-red-500 hover:bg-red-400 text-white font-bold text-xs shadow-md shadow-red-950/40 active:scale-95 transition-all"
+              >
+                {texts.deleteConfirmBtn}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -5,7 +5,18 @@ A calming sleep companion app for babies and toddlers featuring soothing multi-s
 ---
 ## Version History & Changelog
 
-### v1.1.0 (Latest)
+### v1.1.1 (Latest)
+- **Backup Export & Import (`.json`) & Update Safety**: Added simple, plain-language JSON backup export and import in Settings (`Merge` or `Replace` modes) so parents can protect their sleep history and transfer data to a new phone, while ensuring sleep history is preserved across app updates.
+- **Clean New-User Start & Delete Confirmation**: New users now start with a clean empty sleep history instead of sample entries, and deleting any saved sleep record in Mode 4 requires explicit confirmation to prevent accidental taps.
+- **Compact Collapsible Settings**: Reorganized all Settings groups into compact single-open accordions (collapsed by default with live status summaries) for effortless mobile browsing.
+- **Silent Offline Wake-Window Reminder**: Added an optional offline local notification ahead of the child's ideal sleep window (`10 / 15 / 20 / 30` min lead, test notification button, quick toggle in Mode 4, automatic cancellation when sleep starts, native Android `AlarmManager` silent channel).
+- **Collapsible 7-Day Sleep Trend Line Chart**: Added an expandable classic straight-line chart in Mode 4 featuring a **Day & Night** vs. **Total (24h)** switcher, night-friendly Sky Blue & Soft Peach colors, age-recommended target band, interactive day selection, and 7-day averages.
+- **Shareable Pediatrician / Sleep Consultant Summary**: Added a collapsible 7-day / 14-day report in Mode 4 with circular-mean bedtime and wake-up times, sleep quality breakdown, Share, Copy text, preview, and UTF-8 CSV export across all 10 languages.
+- **Mode 4 Layout & Accuracy Refinements**: Moved "Add Sleep Manually" directly below the Current Status card and placed the Pediatrician Summary below Sleep History; unified 7d/14d night-sleep averages and made calendar day math DST-safe.
+- **Android Lock Screen Chronometer Fix (MIUI / Older Devices)**: Upgraded the ongoing sleep lock-screen notification with a custom native `<Chronometer>` layout (`RemoteViews` + `DecoratedCustomViewStyle` + `setPublicVersion`) so live elapsed sleep time ticks reliably on Redmi Note 11 (MIUI) and older Android devices.
+- **Android Release 6 (`v1.1.1`)**: Configured `versionName "1.1.1"` and `versionCode 6` in `.github/workflows/main.yml` for signed Google Play Console `.aab` bundle builds (`app-release-aab`).
+
+### v1.1.0
 - **Public Release**: The application has successfully passed testing and is now officially publicly available!
 - **Child Name & Birth Date Personalization**: Set your child's name and date of birth during first-run onboarding or anytime in Settings, with natural, grammatically verified phrasing across all 10 languages.
 - **Age-Based Optimal Wake Window Alerts**: Science-backed wake-window guidance (0–48+ months) with a live progress bar, gentle status alerts, sleepy-cues reminder, and official 24-hour sleep targets (AASM/AAP & WHO/NSF).
@@ -32,7 +43,7 @@ A calming sleep companion app for babies and toddlers featuring soothing multi-s
 ### v1.0
 - **Refined Mobile Layout Geometry**: Halved footer height (`py-1.5`) for a minimalist bottom bar, established an exact 2mm spacing between the sleep timer module and the footer, and trimmed 2mm from the top header padding (`pt-[6mm]`) for optimal screen utilization.
 - **Complete Main Menu Button Localization**: Fully localized the "Back to main menu" navigation button, tooltips, and aria-labels across Slovak, Czech, English, Polish, Hungarian, Ukrainian, and Italian.
-- **Interactive In-App Changelog Modal**: Tapping the version badge (`v1.1.0`) in the footer opens an interactive, scrollable modal displaying the complete version history, release notes, and latest features.
+- **Interactive In-App Changelog Modal**: Tapping the version badge (`v1.1.1`) in the footer opens an interactive, scrollable modal displaying the complete version history, release notes, and latest features.
 - **Author Notice & Feedback Modal**: Tapping the author's name ("Autor: Matej Šoltis") displays a localized message for parents with direct email feedback contact (`msglitchapps@gmail.com`) and one-tap copy functionality.
 - **Official v1.0 Android Release Configuration**: Synchronized version 1.0 across `package.json`, root `capacitor.config.json`, and the GitHub Actions Android build workflow (`versionName "1.0"` / `versionCode 1`).
 

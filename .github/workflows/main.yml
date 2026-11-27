@@ -40,6 +40,7 @@ jobs:
             echo "::error::Secret KEYSTORE_BASE64 je prázdny alebo chýba v GitHub Secrets."
             exit 1
           fi
+          umask 077
           printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > /tmp/check.keystore
 
           STORE_PASS="$(printf '%s' "$STORE_PASSWORD" | tr -d '\r\n')"
@@ -122,9 +123,9 @@ jobs:
           node -e '
             const fs = require("fs");
 
-            // 1. Dekódovanie keystore zo secretu
+            // 1. Dekódovanie keystore zo secretu s obmedzenými oprávneniami
             const rawBase64 = (process.env.KEYSTORE_BASE64 || "").replace(/\s+/g, "");
-            fs.writeFileSync("android/app/release.keystore", Buffer.from(rawBase64, "base64"));
+            fs.writeFileSync("android/app/release.keystore", Buffer.from(rawBase64, "base64"), { mode: 0o600 });
 
             // 2. Nastavenie SDK 36 vo variables.gradle
             let vg = fs.readFileSync("android/variables.gradle", "utf8");
@@ -133,10 +134,10 @@ jobs:
             vg = vg.replace(/targetSdkVersion\s*=\s*[0-9]+/g, "targetSdkVersion = 36");
             fs.writeFileSync("android/variables.gradle", vg);
 
-            // 3. Nastavenie verzie 1.1.0 a versionCode 5
+            // 3. Nastavenie verzie 1.1.1 a versionCode 6
             let bg = fs.readFileSync("android/app/build.gradle", "utf8");
-            bg = bg.replace(/versionCode\s+[0-9]+/g, "versionCode 5");
-            bg = bg.replace(/versionName\s+"[^"]+"/g, "versionName \"1.1.0\"");
+            bg = bg.replace(/versionCode\s+[0-9]+/g, "versionCode 6");
+            bg = bg.replace(/versionName\s+"[^"]+"/g, "versionName \"1.1.1\"");
             fs.writeFileSync("android/app/build.gradle", bg);
 
             // 4. Potlačenie AGP kontroly pre SDK 36
@@ -152,7 +153,7 @@ jobs:
             sed -i '/<\/style>/i \        <item name="android:windowFullscreen">true</item>\n        <item name="android:windowContentOverlay">@null</item>' android/app/src/main/res/values/styles.xml || true
           fi
 
-          # 2. Pridanie povolenia POST_NOTIFICATIONS do AndroidManifest.xml (pre Android 13+ zamknutú obrazovku)
+          # 2. Pridanie povolenia POST_NOTIFICATIONS a receivera pre tiché pripomienky bdelého okna do AndroidManifest.xml
           node -e '
             const fs = require("fs");
             const manifestPath = "android/app/src/main/AndroidManifest.xml";
@@ -163,17 +164,161 @@ jobs:
                   /<manifest([^>]*)>/,
                   "<manifest$1>\n    <uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\" />"
                 );
-                fs.writeFileSync(manifestPath, xml);
               }
+              if (!xml.includes("WakeWindowReminderReceiver")) {
+                xml = xml.replace(
+                  /<\/application>/,
+                  "        <receiver android:name=\".WakeWindowReminderReceiver\" android:exported=\"false\" />\n    </application>"
+                );
+              }
+              fs.writeFileSync(manifestPath, xml);
             }
           '
 
-          # 3. Natívny Capacitor plugin pre tiché zobrazenie prebiehajúceho spánku na zamknutej obrazovke Androidu (so živým chronometrom)
+          # 3a. BroadcastReceiver pre tichú lokálnu pripomienku ideálneho bdelého okna (bez zvuku a vibrácií)
           mkdir -p android/app/src/main/java/com/matej/toddlersleep
+          cat << 'EOF' > android/app/src/main/java/com/matej/toddlersleep/WakeWindowReminderReceiver.java
+          package com.matej.toddlersleep;
+
+          import android.Manifest;
+          import android.app.Notification;
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.app.PendingIntent;
+          import android.content.BroadcastReceiver;
+          import android.content.Context;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.os.Build;
+          import androidx.core.app.NotificationCompat;
+          import androidx.core.app.NotificationManagerCompat;
+          import androidx.core.content.ContextCompat;
+
+          public class WakeWindowReminderReceiver extends BroadcastReceiver {
+              public static final String WAKE_CHANNEL_ID = "wake_window_reminder_channel";
+              public static final int WAKE_NOTIFICATION_ID = 4042;
+              public static final String EXTRA_TITLE = "title";
+              public static final String EXTRA_BODY = "body";
+              public static final String EXTRA_CHANNEL_NAME = "channelName";
+
+              public static void ensureChannel(Context context, String channelName) {
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                      if (manager == null) return;
+                      String safeName = (channelName != null && !channelName.isEmpty()) ? channelName : "Wake Window Reminder";
+                      NotificationChannel channel = new NotificationChannel(
+                          WAKE_CHANNEL_ID,
+                          safeName,
+                          NotificationManager.IMPORTANCE_DEFAULT
+                      );
+                      channel.setSound(null, null);
+                      channel.enableVibration(false);
+                      channel.enableLights(false);
+                      channel.setShowBadge(true);
+                      channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+                      manager.createNotificationChannel(channel);
+                  }
+              }
+
+              public static void showSilentReminder(Context context, String title, String body, String channelName) {
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                      ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                      return;
+                  }
+                  ensureChannel(context, channelName);
+
+                  Intent launchIntent = new Intent(context, MainActivity.class);
+                  launchIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                  PendingIntent contentIntent = PendingIntent.getActivity(
+                      context,
+                      WAKE_NOTIFICATION_ID,
+                      launchIntent,
+                      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                  );
+
+                  NotificationCompat.Builder builder = new NotificationCompat.Builder(context, WAKE_CHANNEL_ID)
+                      .setSmallIcon(context.getApplicationInfo().icon)
+                      .setContentTitle(title != null ? title : "Ideal sleep window approaching")
+                      .setContentText(body != null ? body : "")
+                      .setStyle(new NotificationCompat.BigTextStyle().bigText(body != null ? body : ""))
+                      .setAutoCancel(true)
+                      .setSilent(true)
+                      .setCategory(NotificationCompat.CATEGORY_REMINDER)
+                      .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                      .setContentIntent(contentIntent);
+
+                  try {
+                      NotificationManagerCompat.from(context).notify(WAKE_NOTIFICATION_ID, builder.build());
+                  } catch (SecurityException ignored) {
+                      // Gracefully ignore if notification permission was revoked
+                  }
+              }
+
+              @Override
+              public void onReceive(Context context, Intent intent) {
+                  if (intent == null) return;
+                  String title = intent.getStringExtra(EXTRA_TITLE);
+                  String body = intent.getStringExtra(EXTRA_BODY);
+                  String channelName = intent.getStringExtra(EXTRA_CHANNEL_NAME);
+                  showSilentReminder(context, title, body, channelName);
+              }
+          }
+          EOF
+
+          # 3b. Natívny XML layout pre živý časovač (Chronometer) priamo v tele notifikácie (spoľahlivé na Redmi Note 11 / MIUI aj starších Androidoch)
+          mkdir -p android/app/src/main/res/layout
+          cat << 'EOF' > android/app/src/main/res/layout/notification_ongoing_sleep.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="vertical">
+
+              <LinearLayout
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:gravity="center_vertical"
+                  android:orientation="horizontal">
+
+                  <TextView
+                      android:id="@+id/sleep_notif_title"
+                      style="@style/TextAppearance.Compat.Notification.Title"
+                      android:layout_width="0dp"
+                      android:layout_height="wrap_content"
+                      android:layout_weight="1"
+                      android:ellipsize="end"
+                      android:maxLines="1"
+                      android:textStyle="bold" />
+
+                  <Chronometer
+                      android:id="@+id/sleep_notif_chronometer"
+                      style="@style/TextAppearance.Compat.Notification.Title"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:layout_marginStart="8dp"
+                      android:fontFamily="monospace"
+                      android:singleLine="true"
+                      android:textStyle="bold" />
+              </LinearLayout>
+
+              <TextView
+                  android:id="@+id/sleep_notif_body"
+                  style="@style/TextAppearance.Compat.Notification.Line2"
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:layout_marginTop="2dp"
+                  android:ellipsize="end"
+                  android:maxLines="1" />
+          </LinearLayout>
+          EOF
+
+          # 3c. Natívny Capacitor plugin pre zamknutú obrazovku + tiché pripomienky bdelého okna
           cat << 'EOF' > android/app/src/main/java/com/matej/toddlersleep/SleepLockScreenNotificationPlugin.java
           package com.matej.toddlersleep;
 
           import android.Manifest;
+          import android.app.AlarmManager;
           import android.app.Notification;
           import android.app.NotificationChannel;
           import android.app.NotificationManager;
@@ -182,6 +327,8 @@ jobs:
           import android.content.Intent;
           import android.content.pm.PackageManager;
           import android.os.Build;
+          import android.os.SystemClock;
+          import android.widget.RemoteViews;
           import androidx.core.app.NotificationCompat;
           import androidx.core.app.NotificationManagerCompat;
           import androidx.core.content.ContextCompat;
@@ -236,6 +383,54 @@ jobs:
                   }
               }
 
+              private RemoteViews buildLiveChronometerViews(Context context, String title, String body, long startTimeMs) {
+                  try {
+                      long elapsedMs = Math.max(0L, System.currentTimeMillis() - startTimeMs);
+                      long chronometerBase = SystemClock.elapsedRealtime() - elapsedMs;
+                      RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.notification_ongoing_sleep);
+                      views.setTextViewText(R.id.sleep_notif_title, title);
+                      views.setTextViewText(R.id.sleep_notif_body, body);
+                      views.setChronometer(R.id.sleep_notif_chronometer, chronometerBase, null, true);
+                      return views;
+                  } catch (Exception ignored) {
+                      return null;
+                  }
+              }
+
+              private NotificationCompat.Builder buildOngoingSleepBuilder(
+                  Context context,
+                  String title,
+                  String body,
+                  long safeStartMs,
+                  PendingIntent contentIntent
+              ) {
+                  NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
+                      .setSmallIcon(context.getApplicationInfo().icon)
+                      .setContentTitle(title)
+                      .setContentText(body)
+                      .setWhen(safeStartMs)
+                      .setShowWhen(true)
+                      .setUsesChronometer(true)
+                      .setOngoing(true)
+                      .setAutoCancel(false)
+                      .setOnlyAlertOnce(true)
+                      .setSilent(true)
+                      .setCategory(NotificationCompat.CATEGORY_STATUS)
+                      .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                      .setContentIntent(contentIntent);
+
+                  RemoteViews compactViews = buildLiveChronometerViews(context, title, body, safeStartMs);
+                  if (compactViews != null) {
+                      RemoteViews expandedViews = buildLiveChronometerViews(context, title, body, safeStartMs);
+                      builder
+                          .setStyle(new NotificationCompat.DecoratedCustomViewStyle())
+                          .setCustomContentView(compactViews)
+                          .setCustomBigContentView(expandedViews != null ? expandedViews : compactViews);
+                  }
+                  return builder;
+              }
+
               @PluginMethod
               public void checkNotificationPermission(PluginCall call) {
                   JSObject ret = new JSObject();
@@ -275,7 +470,8 @@ jobs:
                   String title = call.getString("title", "Baby is sleeping");
                   String body = call.getString("body", "");
                   String channelName = call.getString("channelName", "Ongoing Sleep Tracker");
-                  long startTimeMs = call.getData().optLong("startTimeMs", System.currentTimeMillis());
+                  long rawStartMs = call.getData().optLong("startTimeMs", System.currentTimeMillis());
+                  long safeStartMs = rawStartMs > 0L ? rawStartMs : System.currentTimeMillis();
 
                   ensureNotificationChannel(channelName);
 
@@ -290,21 +486,22 @@ jobs:
                       PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
                   );
 
-                  NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                      .setSmallIcon(context.getApplicationInfo().icon)
-                      .setContentTitle(title)
-                      .setContentText(body)
-                      .setWhen(startTimeMs > 0 ? startTimeMs : System.currentTimeMillis())
-                      .setShowWhen(true)
-                      .setUsesChronometer(true)
-                      .setOngoing(true)
-                      .setAutoCancel(false)
-                      .setOnlyAlertOnce(true)
-                      .setSilent(true)
-                      .setCategory(NotificationCompat.CATEGORY_STATUS)
-                      .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                      .setContentIntent(contentIntent);
+                  // Public version guarantees live ticking Chronometer is visible even when MIUI/Android hides sensitive lock screen content
+                  Notification publicNotification = buildOngoingSleepBuilder(
+                      context,
+                      title,
+                      body,
+                      safeStartMs,
+                      contentIntent
+                  ).build();
+
+                  NotificationCompat.Builder builder = buildOngoingSleepBuilder(
+                      context,
+                      title,
+                      body,
+                      safeStartMs,
+                      contentIntent
+                  ).setPublicVersion(publicNotification);
 
                   try {
                       NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, builder.build());
@@ -324,6 +521,100 @@ jobs:
                   NotificationManagerCompat.from(getContext()).cancel(NOTIFICATION_ID);
                   JSObject ret = new JSObject();
                   ret.put("hidden", true);
+                  call.resolve(ret);
+              }
+
+              @PluginMethod
+              public void scheduleWakeReminder(PluginCall call) {
+                  if (!hasNotificationPermission()) {
+                      JSObject ret = new JSObject();
+                      ret.put("scheduled", false);
+                      ret.put("reason", "permission_denied");
+                      call.resolve(ret);
+                      return;
+                  }
+
+                  String title = call.getString("title", "Ideal sleep window approaching");
+                  String body = call.getString("body", "");
+                  String channelName = call.getString("channelName", "Wake Window Reminder");
+                  long triggerAtMs = call.getData().optLong("triggerAtMs", 0L);
+
+                  if (triggerAtMs <= System.currentTimeMillis()) {
+                      JSObject ret = new JSObject();
+                      ret.put("scheduled", false);
+                      ret.put("reason", "past_time");
+                      call.resolve(ret);
+                      return;
+                  }
+
+                  Context context = getContext();
+                  WakeWindowReminderReceiver.ensureChannel(context, channelName);
+
+                  Intent alarmIntent = new Intent(context, WakeWindowReminderReceiver.class);
+                  alarmIntent.putExtra(WakeWindowReminderReceiver.EXTRA_TITLE, title);
+                  alarmIntent.putExtra(WakeWindowReminderReceiver.EXTRA_BODY, body);
+                  alarmIntent.putExtra(WakeWindowReminderReceiver.EXTRA_CHANNEL_NAME, channelName);
+
+                  PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                      context,
+                      WakeWindowReminderReceiver.WAKE_NOTIFICATION_ID,
+                      alarmIntent,
+                      PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                  );
+
+                  AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+                  if (alarmManager != null) {
+                      alarmManager.cancel(pendingIntent);
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                          alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMs, pendingIntent);
+                      } else {
+                          alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMs, pendingIntent);
+                      }
+                  }
+
+                  JSObject ret = new JSObject();
+                  ret.put("scheduled", true);
+                  call.resolve(ret);
+              }
+
+              @PluginMethod
+              public void cancelWakeReminder(PluginCall call) {
+                  Context context = getContext();
+                  Intent alarmIntent = new Intent(context, WakeWindowReminderReceiver.class);
+                  PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                      context,
+                      WakeWindowReminderReceiver.WAKE_NOTIFICATION_ID,
+                      alarmIntent,
+                      PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE
+                  );
+                  if (pendingIntent != null) {
+                      AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+                      if (alarmManager != null) {
+                          alarmManager.cancel(pendingIntent);
+                      }
+                      pendingIntent.cancel();
+                  }
+                  NotificationManagerCompat.from(context).cancel(WakeWindowReminderReceiver.WAKE_NOTIFICATION_ID);
+                  JSObject ret = new JSObject();
+                  ret.put("cancelled", true);
+                  call.resolve(ret);
+              }
+
+              @PluginMethod
+              public void showInstantWakeReminder(PluginCall call) {
+                  if (!hasNotificationPermission()) {
+                      JSObject ret = new JSObject();
+                      ret.put("shown", false);
+                      ret.put("reason", "permission_denied");
+                      call.resolve(ret);
+                      return;
+                  }
+                  String title = call.getString("title", "Wake Window Reminder");
+                  String body = call.getString("body", "");
+                  String channelName = call.getString("channelName", "Wake Window Reminder");
+                  WakeWindowReminderReceiver.showSilentReminder(getContext(), title, body, channelName);
+                  JSObject ret = new JSObject();
+                  ret.put("shown", true);
                   call.resolve(ret);
               }
           }
